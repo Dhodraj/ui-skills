@@ -50,22 +50,6 @@ to 0, console errors 1 to 0. The method, the rest of the numbers, and the one
 measurement that went the other way are in
 [docs/ab-test.md](docs/ab-test.md).
 
-## The result it is built around
-
-A script catches what is measurable. Only looking catches the rest. Building
-the console in `demo/` produced seven faults:
-
-| Found by measuring | Found by looking |
-|---|---|
-| 444px page in a 375px viewport | A figure whose entire point was invisible, because the planned window and the empty track were the same grey |
-| Nav links at 23px, under the 24px floor | The right half of the first screen empty while the words sat left |
-| | A fix for that which stretched the grid apart and wrapped `14:20` to `14:2 / 0` |
-| | Five children in a four-column grid, so a value wrapped below its row |
-
-Four of seven were invisible to the measurement. Two were caused by an
-earlier fix. That is why the skill does both, and re-runs both after every
-change.
-
 ## Component discovery
 
 Search the project first, then 508 shadcn-spec registries, with no account
@@ -174,31 +158,25 @@ cd demo && python3 -m http.server 8731
 `demo/console-plain.html` is the same console before the craft pass. Put them
 side by side.
 
-## Honesty
+## Limits
 
-The reports in `docs/` separate what was read at its source from what was
-inferred, and what was executed from what was not. Known gaps are written
-down rather than left out:
-
-- `pnpm dlx shadcn` was never run in the session that built this; registry
-  access was proven by fetching the JSON directly.
-- No component was installed into a project, and no real application with a
-  dev server, sign-in and live data was driven.
-- `pnpm dlx @google/design.md lint` is a real gate on `DESIGN.md`, and it was
-  confirmed published at version 0.4.0. It has not been run against a file
-  this skill generated, because no such file exists yet.
 - The gates and the craft rules are instructions, not mechanisms. An agent
-  that skips those files still passes every automated check. The design
-  system is the only part with a linter behind it.
-- Dealing three directions is a stage with a hard stop, but nothing can force
-  the three to differ on a real axis. Three shades of one idea would pass.
-- The Storybook path in `ui-review` is written from the Storybook index and
-  iframe URLs. It has not been run against a real Storybook.
+  that skips those files still passes every automated check. `DESIGN.md` is
+  the only part with a linter behind it.
+- Nothing can force the three directions to differ on a real axis. Three
+  shades of one idea would pass the stage.
+- The Storybook path in `ui-review` has not been run against a real
+  Storybook.
+- `pnpm dlx @google/design.md lint` has not been run against a file these
+  skills generated. The one at `demo/ab/with-skill/DESIGN.md` was written
+  without network access.
+- No component has been installed into a project through `ui-find`, and no
+  application with a dev server, sign-in and live data has been driven.
 - Walking a journey is not customer research. It finds friction. It says
   nothing about what customers do.
 
-Every figure, run, depot and customer in the demo is sample data, and the
-pages say so on their own face.
+Every figure, run, depot and customer in `demo/` is sample data, and the pages
+say so on their own face.
 
 ## Licence and attribution
 

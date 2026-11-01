@@ -1,12 +1,6 @@
 <!doctype html>
-<!--
-  Builds the A/B comparison figure. It composes real screenshots of the two
-  real builds; nothing here is redrawn. Pass the figure id in the query
-  string, for example figure.html?f=wide, then screenshot #fig.
-
-  The numbers in CONF come from measure.js run against each page. They are
-  pasted in by the comparison run, never typed from memory.
--->
+<!-- Composes the comparison figure from the real screenshots.
+     figure.html?f=<id>, then screenshot #fig. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -75,8 +69,6 @@
 <div id="fig"><div id="slot"></div></div>
 
 <script>
-/* Filled in by the comparison run. Every number is read from measure.js
-   output, never typed from memory. */
 const CONF = {
   "wide": {
     "h2": "The same prompt, at 1440",
@@ -194,7 +186,6 @@ if (!f) { document.getElementById("slot").textContent = "no figure: " + id; }
 else {
   if (f.narrow) fig.classList.add("narrow");
 
-  /* solo: one screenshot under one label. No notes, no table. */
   if (f.solo) {
     fig.classList.add("solo");
     document.getElementById("slot").innerHTML =
@@ -217,9 +208,7 @@ else {
   const pair = `<div class="pair ${f.layout || ""}">
     ${side("a", f.a, f.aNote)}${side("b", f.b, f.bNote)}</div>`;
 
-  /* dir says which way the row goes, so a number is never coloured by which
-     column it sits in. "better" = the skilled arm improved on it, "worse" =
-     the skilled arm is the one at fault, "neutral" = context, not a score. */
+  /* dir: better | worse | neutral. Colours the row, not the column. */
   const rows = (f.rows || []).map(([label, a, b, dir]) => {
     const d = dir || (a === b ? "neutral" : "better");
     const [ca, cb] = d === "better" ? ["was", "now"]
