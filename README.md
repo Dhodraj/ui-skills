@@ -33,6 +33,23 @@ code is written.
 Two of those stages are hard stops. The agent does not build past the
 direction nobody picked, and does not call a mock finished without being told.
 
+## The same prompt, with and without the skill
+
+> Build a data platform observability console. It should show pipeline runs,
+> data lineage, table freshness, and incidents.
+
+That prompt, twice. Same model. Once on a stock install, once with
+`ui-design`.
+
+![Without the skill](docs/images/without-skill.png)
+
+![With the skill](docs/images/with-skill.png)
+
+Measured in a browser at 1440: contrast failures 23 to 0, text under 12px 47
+to 0, console errors 1 to 0. The method, the rest of the numbers, and the one
+measurement that went the other way are in
+[docs/ab-test.md](docs/ab-test.md).
+
 ## The result it is built around
 
 A script catches what is measurable. Only looking catches the rest. Building
@@ -157,40 +174,6 @@ real code, states, keyboard handling, dependencies and licence. They are
 ranked by fit, licence, stack, design system, accessibility and install cost,
 in that order. A licence that is not stated anywhere is a blocker, not a
 footnote.
-
-## The same prompt, with and without
-
-One blunt prompt, given twice. Once to a stock Claude Code started with
-`--safe-mode`, which disables CLAUDE.md, skills, plugins, hooks and MCP
-servers. Once to a Claude Code that has `ui-design`. Same model, same words,
-same output format.
-
-> Build a data platform observability console. It should show pipeline runs,
-> data lineage, table freshness, and incidents.
-
-No audience. No states. No design direction. No acceptance criteria.
-
-![The same prompt, at 1440](docs/images/ab-1-wide.png)
-
-![The same prompt, at 375](docs/images/ab-2-phone.png)
-
-The baseline reports four equal figures, so nothing says what to do now. The
-skilled arm names one figure and the consequence behind it. Four tables past
-their deadline. The one that is 1h 42m late. The 09:00 finance pack that is
-therefore not safe. Then two actions, and one time axis every panel hangs
-off.
-
-The part that would survive someone disliking the design is what the skilled
-arm caught in its own work. Reviewing before it finished, it found **eight
-false statements in its own interface**. An incident counted as resolved while
-still mitigating. A table showing green "landed" while lineage called the same
-table stale. A title claiming six days against a five-hour span. No linter
-reports any of those.
-
-Both builds are in `demo/ab/`. The method, the numbers, the defect the skilled
-arm missed, and the two ways the harness itself went wrong are in
-[docs/ab-test.md](docs/ab-test.md). It is one prompt and one run each: it
-shows what the skill changed here, not an average.
 
 ## The design system comes first
 

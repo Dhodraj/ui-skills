@@ -22,6 +22,8 @@
          -webkit-font-smoothing: antialiased; }
   #fig { width: 1180px; padding: 30px; background: var(--paper); }
   #fig.narrow { width: 860px; }
+  #fig.solo { width: 1480px; padding: 20px; }
+  #fig.solo .tag { margin-bottom: 12px; font-size: 14px; }
 
   h2 { font-size: 20px; letter-spacing: -.02em; margin: 0 0 5px; }
   .say { font-size: 14px; color: var(--ink-2); margin: 0 0 22px; max-width: 88ch;
@@ -172,6 +174,16 @@ const CONF = {
       ]
     ],
     "caption": "The last row is Apple's comfortable-target guidance, not a WCAG failure: neither page has a control under 24&nbsp;&times;&nbsp;24 at any width. The skilled arm grows its controls at a phone width, so 47 of 83 reach 44&nbsp;&times;&nbsp;44; the baseline grows one of ten."
+  },
+  "solo-a": {
+    "solo": "a",
+    "shot": "shots/stock-1440.png",
+    "label": "Without the skill"
+  },
+  "solo-b": {
+    "solo": "b",
+    "shot": "shots/skill-1440.png",
+    "label": "With the skill"
   }
 };
 
@@ -181,6 +193,15 @@ const fig = document.getElementById("fig");
 if (!f) { document.getElementById("slot").textContent = "no figure: " + id; }
 else {
   if (f.narrow) fig.classList.add("narrow");
+
+  /* solo: one screenshot under one label. No notes, no table. */
+  if (f.solo) {
+    fig.classList.add("solo");
+    document.getElementById("slot").innerHTML =
+      `<div class="tag ${f.solo === "a" ? "before" : "after"}">
+         <span class="m"></span>${f.label}</div>
+       <figure class="shot"><img src="${f.shot}" alt=""></figure>`;
+  } else {
 
   const side = (kind, src, note) => {
     const cls = kind === "a" ? "before" : "after";
@@ -218,6 +239,7 @@ else {
 
   document.getElementById("slot").innerHTML =
     `<h2>${f.h2}</h2><p class="say">${f.say}</p>${pair}${table}`;
+  }
 }
 </script>
 </body>
