@@ -60,7 +60,15 @@ surfaces, and each picks its own radius.
 - Exits are shorter than enters, 150ms against 300ms, and softer. Use a small
   fixed `translateY`, never the element's full height.
 - Honour `prefers-reduced-motion` by collapsing durations to 1ms, not by
-  leaving elements invisible.
+  leaving elements invisible. Setting a duration to zero is also enough. This
+  is an accommodation for vestibular disorders, not a preference.
+- A hidden element must stop intercepting clicks. Pair `opacity: 0` with
+  `visibility: hidden` or `pointer-events: none`, or an invisible layer eats
+  the press and nothing appears to happen.
+- **Scroll-linked motion is a pure function of scroll position**, never a
+  sequence a scroll starts. The customer can scroll back up, and anything
+  driven by a one-way timeline either stutters or refuses to reverse. Give
+  the moments that matter more scroll distance, and keep the rest brisk.
 
 ## Entrances, and where they are allowed
 

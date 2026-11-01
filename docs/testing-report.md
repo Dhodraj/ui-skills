@@ -7,8 +7,8 @@ Where something was not executed, it says so.
 ## The automated suite
 
 ```
-.claude/skills/product-experience-engineering/tests/run.sh             36 passed, 0 failed
-.claude/skills/product-experience-engineering/tests/run.sh --network   39 passed, 0 failed
+.claude/skills/ui-design/tests/run.sh             36 passed, 0 failed
+.claude/skills/ui-design/tests/run.sh --network   39 passed, 0 failed
 ```
 
 The network run also fetched every url in `sources.json` and every one
@@ -321,7 +321,7 @@ visible.
   CLI: it fetches the public directory and the catalogues directly, and that
   path was exercised end to end.
 - **No component was installed** into any project, so the integrate-and-test
-  half of `component-find` step 6 is untested.
+  half of `ui-find` step 6 is untested.
 - **No real application** was driven: both fixtures are static pages. Starting
   a project's own dev server, signing in, and seeding data are all documented
   in `references/playwright.md` and none of them was performed here.

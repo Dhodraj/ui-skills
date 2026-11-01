@@ -36,15 +36,15 @@ Rules the validator enforces, and why each exists:
 Then:
 
 ```bash
-node .claude/skills/product-experience-engineering/scripts/check-sources.js
-node .claude/skills/product-experience-engineering/scripts/check-sources.js --links
-./.claude/skills/product-experience-engineering/tests/run.sh --network
+node .claude/skills/ui-design/scripts/check-sources.js
+node .claude/skills/ui-design/scripts/check-sources.js --links
+./.claude/skills/ui-design/tests/run.sh --network
 ```
 
 Check the new source is actually reachable before trusting it:
 
 ```bash
-node .claude/skills/product-experience-engineering/scripts/find-components.js \
+node .claude/skills/ui-design/scripts/find-components.js \
   button --curated-only | grep '@example'
 ```
 
@@ -137,7 +137,7 @@ If `browser_evaluate` ever gains a way to load a function from a file,
 ## Extending measure.js
 
 It returns measurements, never verdicts. Keep it that way: a check that
-decides whether something is a problem belongs in `experience-audit`, where a
+decides whether something is a problem belongs in `ui-review`, where a
 human-readable rule can say who it hurts.
 
 Worth adding, in rough order of value, each absent today: card rows off a
@@ -176,8 +176,10 @@ of default looks before calling it done.
 
 ## When the entry point gets long
 
-The twelve stages are the skill. Anything that grows past a short section
+The eleven stages are the skill. Anything that grows past a short section
 belongs in `references/` and is loaded when its stage runs. A companion skill
-is justified only when someone would invoke it on its own: that is the test
-`component-find`, `journey-walk` and `experience-audit` each pass, and the one
-that kept product thinking as a reference document rather than a fourth skill.
+is justified only when someone would invoke it on its own, and when it would
+still be worth invoking alone once the main skill is running. `ui-find` and
+`ui-review` pass both tests. `journey-walk` passed the first and failed the
+second, so on 2026-11-01 it became stage 4 of `ui-review`. Product thinking
+failed the first and stayed a reference document.

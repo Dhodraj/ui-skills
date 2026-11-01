@@ -56,10 +56,10 @@ the project's checks, and report what was verified and what was not.
 > I need a modern workflow execution timeline with running, failed, retrying
 > and completed states, expandable logs, and links to job details.
 
-`component-find` splits that into requirements, searches the project, then:
+`ui-find` splits that into requirements, searches the project, then:
 
 ```
-$ node .claude/skills/product-experience-engineering/scripts/find-components.js \
+$ node .claude/skills/ui-design/scripts/find-components.js \
     timeline stepper activity --limit 10 --registries 16
 
 @stepper   stepper              15  not read: check at the source
@@ -104,7 +104,7 @@ descriptions, and reports:
 
 > This dashboard looks off. Can you check it?
 
-`experience-audit` opens with the mode, because that is the thing most easily
+`ui-review` opens with the mode, because that is the thing most easily
 got wrong:
 
 > Mode: audit only. I will not change any files.
@@ -136,8 +136,8 @@ three questions. It does not start editing.
 
 > Does the trial signup work on a phone?
 
-`journey-walk` finds or starts the application, writes the journey down
-before walking it, then drives it at 375 × 812:
+`ui-review` finds or starts the application, writes the journey down before
+walking it, then drives it at 375 × 812:
 
 ```
 JOURNEY: start a 14-day trial — completed

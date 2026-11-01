@@ -26,7 +26,7 @@
 //   --refresh         ignore the cache and fetch again.
 //   --json            print JSON instead of a table.
 //   --cache-dir <d>   where to cache catalogues. Default
-//                     ${XDG_CACHE_HOME:-~/.cache}/product-experience.
+//                     ${XDG_CACHE_HOME:-~/.cache}/ui-design.
 //
 // Exit 0 with results, 1 with none, 2 on a usage or network error.
 "use strict";
@@ -50,7 +50,7 @@ function parseArgs(argv) {
     json: false,
     cacheDir: path.join(
       process.env.XDG_CACHE_HOME || path.join(os.homedir(), ".cache"),
-      "product-experience",
+      "ui-design",
     ),
   };
   for (let i = 0; i < argv.length; i += 1) {

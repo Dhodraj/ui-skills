@@ -1,7 +1,7 @@
 # Driving the browser
 
-The mechanics behind stage H and the `journey-walk` and `experience-audit`
-skills. Everything stated as observed here was run on 2026-10-27 against
+The mechanics behind stage 8 of `ui-design` and the browser work in
+`ui-review`. Everything stated as observed here was run on 2026-10-27 against
 Playwright MCP 0.0.83; check it again rather than trusting this page if a tool
 behaves differently.
 

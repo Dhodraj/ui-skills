@@ -11,7 +11,7 @@ used every day has cost more than the look it fixed.
    there is not yours, and finding that out afterwards wastes an hour.
 2. **List the journeys that already work** on the surface you are about to
    change, in one line each. This list is what stage K checks against. Where
-   the surface has no tests, walk the journeys once with `journey-walk` first,
+   the surface has no tests, walk the journeys once with `ui-review` first,
    so there is a recorded before.
 3. **Inventory the controls.** Every interactive element on the screen, with
    what it does. The commonest regression in a redesign is a control that

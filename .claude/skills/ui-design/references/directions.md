@@ -1,6 +1,6 @@
-# Visual direction
+# Directions
 
-Loaded at stage E. It decides what the surface looks like, and it is a
+Loaded at stage 3. It decides what the surface looks like, and it is a
 different decision inside a live product than on a new surface.
 
 ## Which job this is
@@ -15,6 +15,48 @@ different decision inside a live product than on a new surface.
 The commonest failure is the third job being done when it was the first.
 Inventing a second visual system inside a product that already has one costs
 more than the screen is worth.
+
+## Deal three directions, never one
+
+For the third and fourth jobs, and only those. A single proposal is the
+model's default aesthetic wearing a rationale. The user has nothing to compare
+it against. So they either accept it, or ask for "something else" with no
+vocabulary to say what.
+
+Each direction gets four lines:
+
+```
+NAME        Control room
+ANCHOR      One hue, taken from the subject: the amber of a late warning
+TYPE        A condensed grotesque for figures, the body face for everything else
+DENSITY     High. 32px rows, hairlines, no card ever
+SIGNATURE   The late count is the largest thing on the screen, always
+```
+
+Rules for the three:
+
+- **Separate them on a real axis.** Three shades of the same idea is one
+  direction with three palettes. Move the density, or the structure, or what
+  the screen makes dominant.
+- **Take the anchor from the subject**, not the category. Look at the
+  product's own world: its material, its data, its place, what it produces. A
+  palette from there beats one chosen because other tools in the category use
+  it.
+- **Name the signature**: the one thing a customer would remember and
+  describe to a colleague. A direction with no signature is a theme.
+- **Say what each costs**: a licensed font, a photography budget, a component
+  that must be built rather than found.
+- **Never deal the same three twice.** Where a previous direction was picked
+  in this repository, `DESIGN.md` records it; move away from it deliberately.
+
+Then stop. Put the three to the user with the interactive question tool, and
+do not build past it on an assumption. Where the user says "you pick", pick
+one, say which and why in a line, and carry on.
+
+On a yes, write the picked direction into `DESIGN.md` as values and lint it.
+[design-system.md](design-system.md) holds the format. The two directions not
+picked go in one line each under `Overview`, so a later session knows what was
+already considered and rejected.
 
 ## The numbers
 
@@ -121,7 +163,7 @@ and mixing them is why design feedback gets ignored:
 Then recommend a specific change and say which customer problem it removes.
 "Improve the hierarchy" is not a recommendation. "Make the late-run count the
 one dominant figure, drop the other eleven tiles to a single row of labels"
-is. `experience-audit` holds the severity model and the report format.
+is. `ui-review` holds the severity model and the report format.
 
 ## Preserve what is sound
 

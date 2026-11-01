@@ -4,13 +4,15 @@
 
 ```
 .claude/skills/
-  product-experience-engineering/
-    SKILL.md                     the entry point and the twelve stages
+  ui-design/
+    SKILL.md                     the entry point and the eleven stages
     NOTICE                       what was borrowed, from where, under which licence
     sources.json                 component sources, with the licence as read
     references/
+      design-system.md           the DESIGN.md format, and both routes into it
+      gates.md                   the floor, in three tiers: floor, reflex, finish
       product-thinking.md        business, customer and product questions; evidence rules
-      visual-direction.md        direction, the numbers, critique, no default aesthetic
+      directions.md              dealing three directions, the numbers, no default aesthetic
       craft.md                   depth, motion, optical correctness: the layer under layout
       journey-and-states.md      the journey table and the states a fixture hides
       playwright.md              browser mechanics, and what is blocked here
@@ -22,14 +24,13 @@
     tests/
       run.sh                     36 offline tests, 39 with --network
       fixtures/                  the dashboard before and after, and a landing page
-  component-find/SKILL.md        find a component instead of writing one
-  journey-walk/SKILL.md          use the running product as a customer
-  experience-audit/SKILL.md      audit what exists, in two modes
+  ui-find/SKILL.md               find a component instead of writing one
+  ui-review/SKILL.md             review what exists, in two modes
 docs/
   source-research.md             every supplied url, read on 2026-10-27
   adr-0001-architecture.md       why this shape
   testing-report.md              what was run and what came back
-  examples.md                    four worked invocations
+  examples.md                    worked invocations
   maintenance.md                 adding a source, refreshing the research
 demo/
   console.html                   a dispatch console built through the stages
@@ -58,10 +59,9 @@ Confirm with `/skills` or by asking for one by name.
 ### Every project on this machine
 
 ```bash
-cp -R "$REPO/.claude/skills/product-experience-engineering" ~/.claude/skills/
-cp -R "$REPO/.claude/skills/component-find" ~/.claude/skills/
-cp -R "$REPO/.claude/skills/journey-walk" ~/.claude/skills/
-cp -R "$REPO/.claude/skills/experience-audit" ~/.claude/skills/
+cp -R "$REPO/.claude/skills/ui-design" ~/.claude/skills/
+cp -R "$REPO/.claude/skills/ui-find" ~/.claude/skills/
+cp -R "$REPO/.claude/skills/ui-review" ~/.claude/skills/
 ```
 
 On this machine `~/.claude` is installed from `~/Claude-System`, so the right
@@ -108,10 +108,9 @@ Each is the user's decision, and each is referenced rather than required.
 By name:
 
 ```
-/product-experience-engineering
-/component-find
-/journey-walk
-/experience-audit
+/ui-design
+/ui-find
+/ui-review
 ```
 
 Or in plain words, which is what the descriptions are written for:
@@ -119,15 +118,16 @@ Or in plain words, which is what the descriptions are written for:
 | Say | What runs |
 |---|---|
 | "Build the run list screen for dispatchers" | the entry point, at screen depth |
-| "Find me a timeline component with expandable logs" | `component-find` |
-| "Does the signup flow work on a phone?" | `journey-walk` |
-| "Audit this dashboard" | `experience-audit`, audit-only |
-| "Audit this dashboard and fix what you find" | `experience-audit`, audit and fix |
+| "Find me a timeline component with expandable logs" | `ui-find` |
+| "Does the signup flow work on a phone?" | `ui-review`, which walks it |
+| "Audit this dashboard" | `ui-review`, review-only |
+| "Audit this dashboard and fix what you find" | `ui-review`, review and fix |
+| "Make this screen modern" | `ui-design`, in full |
 
 ## Run the scripts directly
 
 ```bash
-S=.claude/skills/product-experience-engineering
+S=.claude/skills/ui-design
 
 node $S/scripts/find-components.js timeline stepper --limit 15
 node $S/scripts/find-components.js data table filter --curated-only

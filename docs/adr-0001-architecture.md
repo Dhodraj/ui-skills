@@ -32,16 +32,15 @@ breaking what worked.
 
 ## Decision
 
-One entry-point skill, `product-experience-engineering`, with twelve stages
+One entry-point skill, `ui-design`, with twelve stages
 that scale to the size of the change, and three companion skills that are
 worth invoking on their own:
 
 | Skill | Why it is separate |
 |---|---|
-| `product-experience-engineering` | The entry point and the order of work |
-| `component-find` | "Find me a component for X" is a request on its own, often with no build attached |
-| `journey-walk` | "Does signup work?" is a request on its own, and is the verification step for every other skill |
-| `experience-audit` | "Audit this" must not start editing; a separate skill makes the two modes explicit |
+| `ui-design` | The entry point and the order of work |
+| `ui-find` | "Find me a component for X" is a request on its own, often with no build attached |
+| `ui-review` | "Audit this" must not start editing; a separate skill makes the two modes explicit. Walking a journey as a customer lives here too: it is the verification step for every other skill, and splitting it out left two skills that could not be used without each other |
 
 Everything else is a reference document under the entry point, loaded when
 the stage needs it: product thinking, visual direction, craft, the journey
@@ -76,7 +75,11 @@ Plus `scripts/check-sources.js` and `tests/run.sh`, following the shape the
 | Build discovery on the 21st.dev MCP | Its component retrieval starts at a paid plan, and the free tier is two copies a day. The shadcn directory is free, scriptable and covers 508 registries including most of what 21st indexes |
 | Require the shadcn MCP server | It is supported and useful, but a skill that only works with an MCP server configured does not work on a fresh machine. The script needs only Node and the network, and `--curated-only` keeps it useful with neither |
 | Install impeccable or taste-skill as dependencies | Both are good, and both are the user's decision: impeccable downloads a binary on first run, and taste-skill is a large asset library. They are referenced where they are the better tool |
-| Put the craft values in `visual-direction.md` | That file answers "what should this look like"; craft answers "how is it built so it feels right". They are read at different stages — E for the direction, G for every edit — so they are separate files |
+| Keep `journey-walk` as a fourth skill | It was one, and it was folded into `ui-review` on 2026-11-01. Nearly every invocation of it was the second stage of a review, and nearly every review needed it. Two skills that are always used together are one skill with a stage |
+| Invent a design-system format | `google-labs-code/design.md` already specifies one and ships a linter for it, under Apache-2.0. A new format would need its own tooling to be worth anything, and the ecosystem that reads `DESIGN.md` at a project root already includes `hallmark` and `open-design`. The section list is extended rather than replaced |
+| Use the 9-section prose format alone | It is what 84 real brand files and 151 `open-design` packages use, so the ecosystem fit is better. But nothing can lint prose, and a contrast failure written into a design system propagates into every screen built from it. The token layer buys a real gate for the cost of some YAML |
+| Put the craft values in `directions.md` | That file answers "what should this look like"; craft answers "how is it built so it feels right". They are read at different stages — E for the direction, G for every edit — so they are separate files |
+| Fold `gates.md` into `craft.md` | They answer different questions at different costs. `gates.md` is a floor whose rules name a harmed customer or a false claim, and some of it is never waivable. `craft.md` is quality above that floor and is all judgement. Mixing them makes the floor look negotiable |
 | A craft linter instead of a reference | Most of it cannot be measured. A shadow standing in for a border, an entrance on a repeated interaction, an optical mis-centre: each needs the judgement of someone looking. `measure.js` already takes the parts that are numbers |
 
 ## Consequences
@@ -86,7 +89,7 @@ Plus `scripts/check-sources.js` and `tests/run.sh`, following the shape the
 - Nothing is duplicated: the numbers stay in `blueprint`, the look stays in
   `inspect`, the research method stays in `customer-research`.
 - The core — product thinking, journey mapping, visual direction, the audit —
-  works with no network and no registry: only `component-find` needs either.
+  works with no network and no registry: only `ui-find` needs either.
 - Component discovery is deterministic and free, and its output names its own
   limits.
 - Adding a component source is one object in `sources.json`, validated by a
@@ -105,16 +108,24 @@ Plus `scripts/check-sources.js` and `tests/run.sh`, following the shape the
   card-row alignment, baselines, gutters, concentric corners or padding
   asymmetry. Those are left to the look, and to that skill where it is
   installed.
-- Nothing enforces `craft.md`. It is read at stage G and then relied on. The
-  demo in `demo/` was built to it by hand, and the difference is visible
-  against `demo/console-plain.html`. An agent that skips the file produces
-  the plain version and still passes every automated check.
-- Nothing forces a distinctive direction either. `visual-direction.md` bans
-  the default look and names the values to decide. It does not make the agent
-  produce three options and choose among them, which is how `taste-skill`
-  solves the same problem. This is the largest known gap.
-- Four skills mean four descriptions competing to be matched. The
-  descriptions were written to be disjoint, but overlap is possible.
+- Nothing enforces `craft.md` or `gates.md`. Both are read at stage 7 and
+  then relied on. The demo in `demo/` was built to them by hand, and the
+  difference is visible against `demo/console-plain.html`. An agent that
+  skips those files produces the plain version and still passes every
+  automated check. `DESIGN.md` is the one exception, because
+  `pnpm dlx @google/design.md lint` is a real gate with a non-zero exit code.
+- Dealing three directions is now a stage with a hard stop, which closes part
+  of the gap `taste-skill` closes differently. It does not close all of it:
+  nothing can force the three to differ on a real axis, so three shades of
+  one idea would pass the stage and fail the purpose.
+- Depending on `@google/design.md` means a network fetch on first use and a
+  published package that could change. Version 0.4.0 was confirmed on npm.
+  The schema is simple enough to follow by hand if the package goes away;
+  what would be lost is the gate, not the format.
+- Three skills mean three descriptions competing to be matched. The
+  descriptions were written to be disjoint, but overlap is possible. Folding
+  `journey-walk` into `ui-review` removed the worst of it: "does this work"
+  and "is this good" were two descriptions chasing the same request.
 
 ## What would change this decision
 
@@ -122,7 +133,7 @@ Plus `scripts/check-sources.js` and `tests/run.sh`, following the shape the
   browser route would have to be reconsidered and `uicheck.py`, or something
   like it, would earn its dependency.
 - If a free registry index with real semantic search appeared, step 3 of
-  `component-find` would change.
+  `ui-find` would change.
 - If `blueprint` and `inspect` were removed from this machine, the floor
-  stated in `references/visual-direction.md` would have to become the full
+  stated in `references/directions.md` would have to become the full
   set of numbers.

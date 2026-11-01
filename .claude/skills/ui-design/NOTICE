@@ -36,7 +36,7 @@ Taken as ideas, reworded and reduced:
   Taken: that a page's idea comes from the subject rather than from its
   category, and that stripping ornament without adding substance makes a page
   worse. Changed: written as two paragraphs in
-  references/visual-direction.md, which refers to the skill for the method.
+  references/directions.md, which refers to the skill for the method.
   Its direction library and scripts are not reproduced.
 
 - pbakaus/impeccable, Apache-2.0. https://github.com/pbakaus/impeccable
@@ -67,6 +67,75 @@ Taken as ideas, reworded and reduced:
   against keyframes for sequences. Changed: reduced to the motion section of
   references/craft.md in our own words; none of its animation recipes,
   component guidance or prose is reused.
+
+- google-labs-code/design.md, Apache-2.0.
+  https://github.com/google-labs-code/design.md
+  Taken: the DESIGN.md token schema used in references/design-system.md — the
+  front-matter YAML layer, the colors, typography, spacing, rounded and
+  components groups, the {path.to.token} reference form, and the fixed
+  section order. Changed: the section list was extended with Responsive
+  Behavior and Agent Prompt Guide, and two routes into the file were added:
+  codifying a system that exists, and proposing a new one. Its npm package
+  @google/design.md is called as a tool, never vendored. Apache-2.0 requires
+  that modifications be marked, which this entry does.
+
+- VoltAgent/awesome-design-md, MIT.
+  https://github.com/VoltAgent/awesome-design-md
+  Taken: the longer section list, specifically Responsive Behavior and Agent
+  Prompt Guide, and the practice of describing a direction as mood plus
+  accent plus type in one line. Changed: merged onto Google's token schema
+  rather than used as prose alone. None of its 84 collected DESIGN.md files
+  is reproduced, and each remains its own brand's property.
+
+- Nutlope/hallmark, MIT. https://github.com/Nutlope/hallmark
+  Taken: the three-tier gate model in references/gates.md — a floor that is
+  never waivable, a reflex tier waivable in a comment with a specific reason,
+  and a finish tier that is answered rather than blocking. Also the practice
+  of building the most important screen alone and reviewing it with fresh
+  context before the rest. Several individual rules were adapted: no invented
+  metrics, no fake send, tinting away from pure black and white, overflow-x
+  clip on both html and body, minmax(0, 1fr) on image tracks, dvh over vh,
+  and the ban on the tracked-capitals label. Changed: rewritten in our own
+  words and cut from 85 numbered gates to the ones that name a real harm. Its
+  50 themes, its scripts, its stamp format and its waiver syntax are not
+  reproduced.
+
+- nexu-io/open-design, Apache-2.0. https://github.com/nexu-io/open-design
+  Taken: the pipeline shape, brief to direction to design system to artifact,
+  and the fork between codifying an existing brand and picking a new
+  direction. Also the rule that a project's own design tokens outrank any
+  universal craft rule. Changed: reduced to stages 1, 3 and 6 of SKILL.md.
+  Where its craft rules require letter-spacing on capitals, this skill
+  disagrees and says so in references/gates.md rather than hiding the
+  conflict. None of its application, its 151 design-system packages or its
+  plugin catalogue is reused.
+
+- greensock/gsap-skills, MIT. https://github.com/greensock/gsap-skills
+  Taken: only the rules that hold for plain CSS — animate transform and
+  opacity rather than width, height, top or left; honour
+  prefers-reduced-motion by setting the duration to zero; and never let a
+  hidden element keep intercepting clicks. Changed: folded into
+  references/gates.md and references/craft.md without any GSAP dependency.
+  GSAP became free for all uses, every plugin included, after Webflow's
+  acquisition; confirmed at gsap.com/pricing.
+
+Read and deliberately not adapted:
+
+- DavidHDev/react-bits and DavidHDev/canvas-ui, both MIT + Commons Clause.
+  The Commons Clause permits use inside an application, website or product
+  but forbids selling, sublicensing or redistributing the components
+  themselves, alone, bundled or ported. Nothing from either is reproduced
+  here. GitHub reports both as NOASSERTION, so ui-find names them as the
+  worked example of why a licence must be read in the repository's own
+  LICENSE file rather than taken from the sidebar label.
+
+- oso95/scroll-world, MIT, and enesozturk/dimensional-drawing, MIT. Read in
+  full. Scroll-world is a paid video-generation pipeline whose costs are
+  stated at roughly 27 US dollars for a six-scene page, and its one
+  transferable rule — scroll-linked motion must be a pure function of scroll
+  position so that it plays correctly in reverse — is noted in
+  references/craft.md. Dimensional-drawing produces specification sheets as
+  inline SVG and is a tool to reach for, not a rule set to absorb.
 
 Referred to rather than reused:
 

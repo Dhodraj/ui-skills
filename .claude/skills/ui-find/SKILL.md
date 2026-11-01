@@ -1,5 +1,5 @@
 ---
-name: component-find
+name: ui-find
 description: "Find a component that already exists instead of writing a new one. Use when the user describes a UI need in words (\"a workflow timeline with running, failed and retrying states and expandable logs\"), asks what component to use, asks for alternatives to one, or asks whether something is already in the project. Searches the project first, then 500+ shadcn-spec registries, reads the candidates' real code and dependencies, ranks them against the project's stack and licence needs, and returns exact names and links."
 ---
 
@@ -48,14 +48,14 @@ registries this project has already accepted.
 ## 3. Search the registries
 
 ```bash
-node ../product-experience-engineering/scripts/find-components.js \
+node ../ui-design/scripts/find-components.js \
   timeline stepper activity --limit 20
 ```
 
 Options that matter:
 
 - `--curated-only` searches only the read-and-licensed sources in
-  [sources.json](../product-experience-engineering/sources.json);
+  [sources.json](../ui-design/sources.json);
 - `--registries <n>` widens the long tail;
 - `--type any` includes blocks, hooks and whole pages, not only
   `registry:ui`;
@@ -88,6 +88,26 @@ Other routes, when the script's coverage is not enough:
   helps when the user names a library rather than a component. Its free plan
   allows two copies a day and its MCP retrieval starts at a paid plan, so
   search the free directory first.
+- `https://www.shadcn-labs.com` is a hub, **not a registry**: its own
+  `/registry.json` and `/r/registry.json` both return 404. What it is good for
+  is the surfaces the main directory does not cover, each a separate site with
+  its own registry. Reach for one when the component is not a web page
+  component at all:
+
+  | Need | Site |
+  |---|---|
+  | Terminal interface | `termcn.dev` |
+  | Email | `emailcn.run` |
+  | PDF | `pdfcn.dev` |
+  | Open Graph image | `ogimagecn.com` |
+  | Video | `framecn.dev`, `snapcn.dev` |
+  | Shader and WebGPU | `shadercn.run` |
+  | Rich text editor | `editorcn.vercel.app` |
+  | MCP and chat app interface | `mcpcn.dev` |
+  | Diagram in MDX | `mdxcn.dev` |
+
+  Confirm the install command on the site itself. These were read as a
+  directory listing, not installed.
 
 ## 4. Read the candidates
 
@@ -119,9 +139,9 @@ the first three is out whatever it looks like.
 | # | What | How to judge it |
 |---|---|---|
 | 1 | Does it do the job | Every state and behaviour from step 1, or a clear seam to add the missing one |
-| 2 | Licence and cost | Read at the source. MIT or Apache-2.0 is clear. A Commons Clause, an AGPL default, a paid tier or an unstated licence needs the user's decision before it ships |
+| 2 | Licence and cost | Read at the source, in the repository's own `LICENSE` file. GitHub's sidebar label is a guess: it reports both `DavidHDev/react-bits` and `DavidHDev/canvas-ui` as `NOASSERTION`, and both are in fact **MIT + Commons Clause**, which permits use inside a product but forbids redistributing the components "alone, in a bundle, or as a ported version". That rules them out of a template or a starter kit you ship, and it is invisible from the label. An AGPL default, a paid tier or an unstated licence needs the user's decision before it ships |
 | 3 | Stack fit | Same framework, styling system and component base. A Base UI component inside a Radix product is a second system |
-| 4 | Design-system fit | Uses tokens, or can be made to. A component that hard-codes its own palette and radii spreads drift |
+| 4 | Design-system fit | Measure it against the project's `DESIGN.md`, where one exists: does it take the colour, type, radius and spacing tokens, or does it hard-code its own? A component that carries its own palette and radii spreads drift through every screen it lands on |
 | 5 | Accessibility | Keyboard operable, named controls, status never by colour alone, focus visible |
 | 6 | Responsive behaviour | Check at 375px, not only on the desktop preview |
 | 7 | Customer usability | Does it suit the real density and the real labels, or only the demo's six tidy rows |
@@ -146,7 +166,7 @@ dependencies: confirm with the user before the first install from a source the
 project has not used before.
 
 Then map it onto the project's tokens, render it with the real data and the
-dense case, and walk it with `journey-walk`. A component that was never
+dense case, and walk it with `ui-review`. A component that was never
 rendered in this product has not been evaluated.
 
 ## Report
