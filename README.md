@@ -53,7 +53,7 @@ measurement that went the other way are in
 ## The result it is built around
 
 A script catches what is measurable. Only looking catches the rest. Building
-the demo below produced seven faults:
+the console in `demo/` produced seven faults:
 
 | Found by measuring | Found by looking |
 |---|---|
@@ -65,87 +65,6 @@ the demo below produced seven faults:
 Four of seven were invisible to the measurement. Two were caused by an
 earlier fix. That is why the skill does both, and re-runs both after every
 change.
-
-## An audit, before and after
-
-A plausible machine-built dashboard, and the same screen after the audit's
-blocker and critical findings were fixed. Both measured in a real browser at
-1440 and 375.
-
-![Nothing on the screen said what to do first](docs/images/fig-1-hierarchy.png)
-
-![Run status was a coloured dot and nothing else](docs/images/fig-2-status.png)
-
-![At 375px the page scrolled sideways](docs/images/fig-4-mobile.png)
-
-Every number below was measured in the browser at 1440 and 375.
-
-| | Before | After |
-|---|---|---|
-| Text below its contrast floor | 37 | **0** |
-| Targets below 24 × 24 | 3 | **0** |
-| Controls with no accessible name | 3 | **0** |
-| Placeholder used as the only label | 1 | **0** |
-| Heading skips | 1 | **0** |
-| Text below 12px | 13 | **0** |
-| Distinct type sizes / radii / shadows | 10 / 8 / 2 | **4 / 3 / 0** |
-| Page width at a 375px viewport | 780px | **375px** |
-
-The worst contrast was 2.44:1 where 4.5:1 is required. The overflow traced to
-`table { min-width: 760px }`. Three things the measurement could not see. Twelve equal tiles with nothing
-dominant. Status carried by a coloured dot alone. Two identical blue buttons
-side by side.
-
-## A console, before and after the craft pass
-
-Same screen, same content, same markup structure. The right column is what
-`references/craft.md` changes.
-
-At page scale the first three of these are a few pixels each, so here is one
-panel corner at 5x:
-
-![The craft pass, at 5x on one corner](docs/images/fig-3-craft.png)
-
-The entrance cannot be shown in a still at all. Four frames of one page load,
-frozen at exact times:
-
-![The entrance, frozen at four moments](docs/images/fig-5-motion.png)
-
-| Before | After | Why |
-|---|---|---|
-| `1px solid` border on cards and buttons | three-layer `box-shadow` in oklch: ring, lift, ambient | A border drawn for depth reads as a line and breaks on any other surface |
-| one radius everywhere | `12px` panel, `8px` control, concentric | Equal radii on nested surfaces make the inner one look pinched |
-| display figure at 88px on paper | 156px on one dark band | Scale contrast is the cheapest way to make a screen read as designed |
-| no motion | staged enter at 100ms per region, route lines drawing left to right, count rising to 38 | Arrival once, and never on a repeated interaction |
-| hover tints the row | hover also lifts that run's route line | The row and the line are the same run |
-| no `:active` | `scale(.96)` | Below `0.95` reads as a flinch |
-
-The last row of that table is the only one that is not polish. A run row and
-a route line are the same run, so pointing at either marks both:
-
-![A row and its route line are the same run](docs/images/fig-6-link.png)
-
-`scale(.96)` on press has no honest still, so there is no picture of it here.
-
-The whole screen, for context:
-
-![The dispatch console at 1440px](docs/images/console-after.png)
-
-Every control stays reachable at 375px without sideways scrolling, and each
-run becomes its own block:
-
-<img src="docs/images/console-mobile.png" width="375" alt="The console at 375px: the dark band stacks, and each run becomes a labelled block">
-
-## Its public page
-
-Built on the same direction. The product's own output is the signature
-element, and a live control turns the sheet as the hour moves.
-
-![Landing page](docs/images/landing.png)
-
-Measured at 1440 and 375: 0 contrast failures, 0 targets under 24 × 24, 0
-controls with no name, no sideways scroll. The whole conversion journey was
-walked with real clicks and typing, with 0 console errors.
 
 ## Component discovery
 
