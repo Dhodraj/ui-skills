@@ -75,7 +75,105 @@
 <script>
 /* Filled in by the comparison run. Every number is read from measure.js
    output, never typed from memory. */
-const CONF = {};
+const CONF = {
+  "wide": {
+    "h2": "The same prompt, at 1440",
+    "say": "Neither arm was told who uses this screen, what states it has, or what it should look like. <b>The baseline answers the prompt. The skilled arm answers the question the prompt was standing in for.</b>",
+    "a": "shots/stock-1440.png",
+    "b": "shots/skill-1440.png",
+    "aNote": [
+      "Four equal tiles",
+      "nothing on the screen is more important than anything else, and no figure says what to do now"
+    ],
+    "bNote": [
+      "One figure, one sentence, two actions",
+      "it names the table, the deadline it missed, and what breaks because of it: the 09:00 finance pack"
+    ],
+    "layout": "stack",
+    "rows": [
+      [
+        "Text below its contrast floor",
+        "23",
+        "0",
+        "better"
+      ],
+      [
+        "Text under 12px",
+        "47",
+        "0",
+        "better"
+      ],
+      [
+        "Console errors on load",
+        "1",
+        "0",
+        "better"
+      ],
+      [
+        "Distinct radius values",
+        "8",
+        "6",
+        "better"
+      ],
+      [
+        "Interactive elements on the page",
+        "10",
+        "83",
+        "neutral"
+      ],
+      [
+        "Targets under 24 &times; 24 (WCAG 2.5.8)",
+        "0",
+        "0",
+        "neutral"
+      ],
+      [
+        "Level 1 heading",
+        "1",
+        "0",
+        "worse"
+      ]
+    ],
+    "caption": "Measured in the same browser at 1440 &times; 900 with scripts/measure.js. Both pages generate their sample data, so counts move by one or two between loads; the contrast and 12px figures above were 23&ndash;24 and 47&ndash;49 across reloads. The last row goes the wrong way: the skilled arm shipped no level&nbsp;1 heading at all, which is a real defect it did not catch."
+  },
+  "phone": {
+    "h2": "The same prompt, at 375",
+    "say": "Neither page scrolls sideways. What separates them is whether the layout was <b>designed</b> for this width or merely survived it.",
+    "a": "shots/stock-375.png",
+    "b": "shots/skill-375.png",
+    "aNote": [
+      "The brand sits beside the nav",
+      "the lockup is centred against a list that starts above it, so the header reads as broken"
+    ],
+    "bNote": [
+      "The band holds its job",
+      "the figure stays dominant and the sentence still reads, though the control cluster above it wraps untidily"
+    ],
+    "layout": "phones",
+    "narrow": true,
+    "rows": [
+      [
+        "Document width in a 375px viewport",
+        "375",
+        "375",
+        "neutral"
+      ],
+      [
+        "Scrolls sideways",
+        "no",
+        "no",
+        "neutral"
+      ],
+      [
+        "Targets reaching 44 &times; 44",
+        "1 of 10",
+        "47 of 83",
+        "better"
+      ]
+    ],
+    "caption": "The last row is Apple's comfortable-target guidance, not a WCAG failure: neither page has a control under 24&nbsp;&times;&nbsp;24 at any width. The skilled arm grows its controls at a phone width, so 47 of 83 reach 44&nbsp;&times;&nbsp;44; the baseline grows one of ten."
+  }
+};
 
 const id = new URLSearchParams(location.search).get("f") || "wide";
 const f = CONF[id];
@@ -98,11 +196,17 @@ else {
   const pair = `<div class="pair ${f.layout || ""}">
     ${side("a", f.a, f.aNote)}${side("b", f.b, f.bNote)}</div>`;
 
-  const rows = (f.rows || []).map(([label, a, b]) => {
-    const cls = a === b ? "same" : "";
+  /* dir says which way the row goes, so a number is never coloured by which
+     column it sits in. "better" = the skilled arm improved on it, "worse" =
+     the skilled arm is the one at fault, "neutral" = context, not a score. */
+  const rows = (f.rows || []).map(([label, a, b, dir]) => {
+    const d = dir || (a === b ? "neutral" : "better");
+    const [ca, cb] = d === "better" ? ["was", "now"]
+                   : d === "worse"  ? ["now", "was"]
+                   : ["same", "same"];
     return `<tr><td>${label}</td>
-      <td class="n ${cls || "was"}">${a}</td>
-      <td class="n ${cls || "now"}">${b}</td></tr>`;
+      <td class="n ${ca}">${a}</td>
+      <td class="n ${cb}">${b}</td></tr>`;
   }).join("");
 
   const table = rows ? `<table class="nums">

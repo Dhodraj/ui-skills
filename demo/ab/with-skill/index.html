@@ -1,0 +1,2526 @@
+<!doctype html>
+<!--
+  Sluice — data platform observability console.
+  Direction: "Batch window". Every panel hangs off one shared time axis, so a
+  failed run, the tables that went stale behind it and the incident that
+  records it line up in a single vertical read.
+  The design system is DESIGN.md beside this file.
+  All data is sample data, frozen at 2026-11-01 08:42 UTC. Nothing is connected to
+  a warehouse, a pager or a log store.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sluice — pipelines, freshness and incidents</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230d1517'/%3E%3Crect x='3' y='4' width='10' height='2' rx='1' fill='%234fb4ba'/%3E%3Crect x='3' y='7' width='6' height='2' rx='1' fill='%23f08a74'/%3E%3Crect x='3' y='10' width='8' height='2' rx='1' fill='%234fbd8a'/%3E%3C/svg%3E">
+<style>
+:root{
+  /* colour — every colour on the page comes from this block */
+  --ground:#edf1f1; --surface:#fbfdfd; --inset:#e4e9e9;
+  --ink:#0e1619; --ink-2:#3a484c; --ink-3:#5a686c;
+  --rule:#cbd4d4; --rule-soft:#e0e6e6; --edge:#7e8d8f;
+  --accent:#0e6a70; --accent-deep:#0a5257; --accent-ink:#f7fcfc;
+  --breach:#a32c1c; --risk:#7a5000; --ok:#1b6043;
+  --band:#0d1517; --band-ink:#e8eded; --band-quiet:#9aa8ab;
+  --accent-lift:#4fb4ba; --accent-lift-hover:#7ccdd2; --breach-lift:#f08a74; --risk-lift:#d9a33c; --ok-lift:#4fbd8a;
+  --on-band-line:oklch(1 0 0 / .28); --on-band-wash:oklch(1 0 0 / .1); --hatch:oklch(1 0 0 / .3);
+  --wash-breach:#f6e7e4; --wash-risk:#f3ece0; --wash-ok:#e3eee9;
+
+  /* type */
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --t-xl:88px; --t-md:28px; --t-body:16px; --t-lab:13px; --t-micro:12px;
+
+  /* space, radius, depth, motion */
+  --s1:4px; --s2:8px; --s3:16px; --s4:24px; --s5:40px; --s6:64px;
+  --r-sm:4px; --r-md:8px; --r-lg:12px; --r-full:9999px;
+  --row:36px;
+  --lift:0 0 0 1px oklch(0 0 0 / .055),0 1px 2px -1px oklch(0 0 0 / .06),0 2px 4px 0 oklch(0 0 0 / .035);
+  --lift-band:0 0 0 1px oklch(1 0 0 / .1);
+  --out:cubic-bezier(.23,1,.32,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{overflow-x:clip}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font:400 var(--t-body)/1.5 var(--sans);
+  -webkit-font-smoothing:antialiased;text-wrap:pretty;
+  scrollbar-color:var(--edge) var(--ground);
+}
+::selection{background:var(--accent);color:var(--accent-ink)}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.wrapany{overflow-wrap:anywhere}
+h1,h2,h3{margin:0;font-weight:600;line-height:1.3;font-size:var(--t-body);text-wrap:balance}
+p{margin:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
+.wrap{max-width:1560px;margin:0 auto;padding:0 var(--s4) var(--s6)}
+
+/* ── masthead ───────────────────────────────────────────── */
+.mast{display:flex;flex-wrap:wrap;gap:var(--s3) var(--s4);align-items:flex-end;padding:var(--s4) 0 var(--s3)}
+.mast__id{display:flex;flex-direction:column;gap:2px;margin-right:auto;min-width:0}
+.mast__name{display:flex;align-items:baseline;gap:var(--s2)}
+.mast__name b{font-size:21px;font-weight:600;letter-spacing:-.01em}
+.mast__what{font-size:var(--t-lab);color:var(--ink-3)}
+.mast__env{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s3);font-size:var(--t-lab);color:var(--ink-3)}
+.mast__env .mono{color:var(--ink-2)}
+.mast__tools{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:var(--s1)}
+.field>span{font-size:var(--t-micro);color:var(--ink-3)}
+select,input[type=search]{
+  font:400 var(--t-lab)/1.4 var(--sans);color:var(--ink);background:var(--surface);
+  border:1px solid var(--edge);border-radius:var(--r-sm);padding:7px var(--s2);min-height:34px;
+  max-width:100%;min-width:0;text-overflow:ellipsis;
+}
+select{width:210px}
+.field{min-width:0;max-width:100%}
+.mast__tools,.panel__tools,.mast,.panel__head{max-width:100%;min-width:0}
+input[type=search]{font-family:var(--mono)}
+.fetched{display:flex;align-items:center;gap:6px;font-size:var(--t-lab);color:var(--ink-3)}
+.fetched .ico{color:var(--ink-3)}
+[data-state=stale] .fetched{color:var(--risk);font-weight:600}
+[data-state=stale] .fetched .ico{color:var(--risk)}
+.fetched__stale{display:none;align-items:center;gap:6px}
+[data-state=stale] .fetched__fresh{display:none}
+[data-state=stale] .fetched__stale{display:inline-flex}
+.sample{display:flex;gap:var(--s2);align-items:baseline;padding:var(--s2) var(--s3);margin:0 0 var(--s3);
+  background:var(--wash-risk);border:1px solid var(--rule);border-radius:var(--r-md);font-size:var(--t-lab);color:var(--ink-2)}
+.sample b{font-weight:600;color:var(--ink)}
+
+/* ── verdict band ───────────────────────────────────────── */
+.verdict{background:var(--band);color:var(--band-ink);border-radius:var(--r-lg);box-shadow:var(--lift-band);
+  padding:var(--s4);display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:var(--s4) var(--s5);align-items:center}
+.verdict__fig{display:flex;align-items:baseline;gap:var(--s3);min-width:0}
+.verdict__n{font:400 var(--t-xl)/.92 var(--mono);letter-spacing:-.035em;font-variant-numeric:tabular-nums;color:var(--band-ink)}
+.verdict__q{max-width:22ch;font-size:var(--t-lab);line-height:1.45;color:var(--band-quiet)}
+.verdict__q b{display:block;font-size:var(--t-body);font-weight:600;color:var(--band-ink)}
+.verdict__body{display:flex;flex-direction:column;gap:var(--s3);min-width:0}
+.verdict__line{font-size:var(--t-body);font-weight:600;line-height:1.45;max-width:62ch}
+.verdict__line .mono{color:var(--breach-lift);overflow-wrap:anywhere}
+.verdict__row{display:flex;flex-wrap:wrap;gap:var(--s4) var(--s5);align-items:flex-end}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat b{font:400 var(--t-md)/1.05 var(--mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--band-ink)}
+.stat span{font-size:var(--t-lab);color:var(--band-quiet)}
+.verdict__alt{grid-column:1/-1;font-size:var(--t-body);line-height:1.5;color:var(--band-quiet);max-width:62ch}
+[data-state=loading] .verdict__alt.when-loading,[data-state=error] .verdict__alt.when-error,[data-state=empty] .verdict__alt.when-empty{display:block}
+.verdict__act{margin-left:auto;display:flex;gap:var(--s2);align-items:center;flex-wrap:wrap}
+.btn{font:400 var(--t-lab)/1.3 var(--sans);min-height:34px;padding:8px 12px;border-radius:var(--r-sm);
+  border:1px solid transparent;cursor:pointer;display:inline-flex;align-items:center;gap:6px;position:relative;
+  transition:background-color 130ms var(--out),color 130ms var(--out),border-color 130ms var(--out),transform 120ms var(--out)}
+.btn::after{content:"";position:absolute;inset:-5px -2px}
+.btn--primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn--primary:hover{background:var(--accent-deep)}
+.btn--primary:active{transform:scale(.96)}
+.btn--quiet{background:var(--surface);color:var(--ink-2);border-color:var(--edge)}
+.btn--quiet:hover{background:var(--inset);color:var(--ink)}
+.btn--quiet:active{transform:scale(.96)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn[disabled]:active{transform:none}
+.verdict .btn--quiet{background:transparent;color:var(--band-ink);border-color:var(--on-band-line)}
+.verdict .btn--quiet:hover{background:var(--on-band-wash);color:var(--band-ink)}
+.verdict .btn--primary{background:var(--accent-lift);color:var(--band)}
+.verdict .btn--primary:hover{background:var(--accent-lift-hover)}
+
+/* ── shared time axis ───────────────────────────────────── */
+.axis{position:sticky;top:0;z-index:5;display:flex;gap:var(--s4);align-items:center;
+  margin:var(--s4) 0 0;padding:var(--s2) var(--s3);background:var(--ground);
+  border:1px solid var(--rule);border-radius:var(--r-lg)}
+.axis__lab{display:flex;flex-direction:column;gap:1px;flex:0 0 auto}
+.axis__name{font-size:var(--t-lab);font-weight:600}
+.axis__range{font-size:var(--t-micro);color:var(--ink-3)}
+.axis__scale{position:relative;flex:1 1 auto;min-width:0;height:34px;background:var(--inset);border-radius:var(--r-sm)}
+.tick{position:absolute;top:14px;bottom:0;width:1px;background:var(--rule)}
+.tick--hour{top:0;background:var(--edge)}
+.tick__t{position:absolute;top:1px;font-size:var(--t-micro);color:var(--ink-3);margin-left:4px}
+.tick__t--end{margin-left:0;transform:translateX(-100%);padding-right:4px}
+.dline{position:absolute;bottom:3px;width:2px;height:9px;background:var(--breach);border-radius:1px}
+.imark{position:absolute;bottom:3px;width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:7px solid var(--ink-2)}
+.nowline{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--accent);border-radius:1px}
+.nowline::after{content:"";position:absolute;top:-3px;left:-2px;width:6px;height:6px;border-radius:var(--r-full);background:var(--accent)}
+.axis__key{display:flex;flex-direction:column;gap:2px;flex:0 0 auto;font-size:var(--t-micro);color:var(--ink-3)}
+.axis__keyi{display:flex;align-items:center;gap:5px}
+.axis__tri{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:7px solid var(--ink-2)}
+.axis__dl{width:2px;height:9px;background:var(--breach);border-radius:1px;margin:0 3px}
+.axis__now{flex:0 0 auto;display:flex;align-items:baseline;gap:5px;font-size:var(--t-lab);font-weight:600;color:var(--accent)}
+.axis__nowk{font-size:var(--t-micro);font-weight:400;color:var(--ink-3)}
+.guide{position:absolute;top:0;bottom:0;width:1px;background:var(--ink);opacity:.55;transform:translateX(0);
+  transition:transform 120ms var(--out)}
+
+/* ── panels ─────────────────────────────────────────────── */
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:var(--r-lg);margin-top:var(--s4)}
+.panel__head{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);align-items:flex-end;padding:var(--s4) var(--s3) var(--s2)}
+.panel__id{display:flex;flex-direction:column;gap:2px;margin-right:auto;min-width:0}
+.panel__id h2{display:flex;align-items:baseline;gap:var(--s2);flex-wrap:wrap}
+.panel__count{font-family:var(--mono);font-size:var(--t-lab);font-weight:400;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.panel__sub{font-size:var(--t-lab);color:var(--ink-3)}
+.panel__tools{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center}
+.chips{display:flex;flex-wrap:wrap;gap:var(--s1)}
+.fchip{font:400 var(--t-lab)/1.3 var(--sans);min-height:30px;padding:6px 10px;border-radius:var(--r-full);
+  background:var(--surface);border:1px solid var(--rule);color:var(--ink-2);cursor:pointer;position:relative;
+  transition:background-color 130ms var(--out),color 130ms var(--out),border-color 130ms var(--out)}
+.fchip::after{content:"";position:absolute;inset:-7px -2px}
+.fchip:hover{background:var(--inset);color:var(--ink)}
+.fchip[aria-pressed=true]{background:var(--band);border-color:var(--band);color:var(--band-ink)}
+.srch{position:relative;display:flex;align-items:center}
+.srch .ico{position:absolute;left:8px;color:var(--ink-3);pointer-events:none}
+.srch input{padding-left:26px;width:190px;max-width:42vw}
+
+/* ── tables ─────────────────────────────────────────────── */
+.tbl-scroll{padding:0 0 var(--s2)}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+thead th{
+  font:400 var(--t-micro)/1.3 var(--sans);color:var(--ink-3);text-align:left;font-weight:400;
+  padding:6px var(--s2);border-bottom:1px solid var(--rule);white-space:nowrap}
+thead th.c-num,thead th.c-rows{text-align:right}
+tbody td{padding:0 var(--s2);border-bottom:1px solid var(--rule-soft);vertical-align:middle;height:var(--row)}
+tbody tr.row{background:var(--surface);transition:background-color 110ms var(--out)}
+tbody tr.row:hover,tbody tr.row.is-link{background:var(--inset)}
+tbody tr.row.is-sel{background:var(--inset)}
+tbody tr.row.is-sel .c-name{box-shadow:inset 3px 0 0 var(--accent)}
+tbody tr.row.is-sel .rowbtn__name{font-weight:600}
+tbody tr.row.is-link .c-name{box-shadow:inset 3px 0 0 var(--ink-2)}
+tbody tr.row.is-link .rowbtn__name{font-weight:600}
+.rowbtn{display:flex;flex-direction:column;gap:0;align-items:flex-start;width:100%;min-width:0;
+  background:none;border:0;padding:4px 0;margin:0;cursor:pointer;text-align:left;position:relative;color:inherit}
+.rowbtn::after{content:"";position:absolute;inset:-4px -8px}
+.rowbtn__name{font-size:var(--t-lab);line-height:1.25;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.c-name .rowbtn__name.mono{font-family:var(--mono)}
+.rowbtn__sub{display:flex;gap:var(--s3);font:400 var(--t-micro)/1.25 var(--mono);color:var(--ink-3);max-width:100%;min-width:0}
+.rowbtn__sub>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-team{display:block;font-size:var(--t-lab);color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-sub{display:block;font-size:var(--t-micro);color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-old{color:var(--ink-3)}
+.c-num{text-align:right;font-family:var(--mono);font-size:var(--t-lab);font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
+.c-state{text-align:left}
+.c-name{width:25%}.c-team{width:13%}.c-bar{width:21%}
+thead .c-num{width:7%}thead .c-rows{width:9%}thead .c-state{width:11%}
+.fresh .c-name{width:24%}.fresh .c-team{width:9%}.fresh .c-bar{width:19%}
+
+/* bars on the shared axis */
+.track{position:relative;display:block;height:10px;border-radius:var(--r-sm);background:var(--inset)}
+.bar{position:absolute;top:0;height:10px;border-radius:var(--r-sm);min-width:3px}
+.bar--ok{background:var(--ok)}
+.bar--failed{background:var(--breach)}
+.bar--late{background:var(--risk)}
+.bar--retrying{background:var(--risk);background-image:repeating-linear-gradient(135deg,var(--hatch) 0 3px,transparent 3px 6px)}
+.bar--running{background:var(--ink-2);background-image:repeating-linear-gradient(135deg,var(--hatch) 0 3px,transparent 3px 6px)}
+.bar--queued{background:transparent;border:1px dashed var(--edge)}
+.bar--cancelled{background:var(--inset);border:1px solid var(--edge)}
+.bar--breach{background:var(--breach)}
+.bar--risk{background:var(--risk)}
+.bar--due{background:var(--inset)}
+.bar--wait{background:transparent;border:1px dashed var(--edge);min-width:0}
+tr[data-fresh=risk] .bar--wait{border-color:var(--risk)}
+tr[data-fresh=breach] .bar--wait{border-color:var(--breach)}
+.bar--clip{border-top-left-radius:1px;border-bottom-left-radius:1px}
+.row:hover .bar,.row.is-link .bar,.row.is-sel .bar{box-shadow:0 0 0 1.5px var(--ink)}
+.deadline{position:absolute;top:-3px;width:2px;height:16px;background:var(--ink);border-radius:1px}
+
+/* status chips */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-lab);line-height:1.3;white-space:nowrap}
+.chip .ico{flex:0 0 auto}
+.chip--landed,.chip--ok{color:var(--ok)}
+.chip--breach,.chip--failed{color:var(--breach)}
+.chip--risk,.chip--late,.chip--retrying{color:var(--risk)}
+.chip--due,.chip--queued,.chip--cancelled,.chip--running{color:var(--ink-2)}
+.chip--second{display:flex;font-size:var(--t-micro);margin-top:1px}
+
+/* expanded row detail */
+.detail td{padding:0;border-bottom:1px solid var(--rule);background:var(--inset)}
+.detail__in{display:flex;flex-direction:column;gap:var(--s2);padding:var(--s3)}
+.kv{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4);margin:0}
+.kv div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.kv dt{font-size:var(--t-micro);color:var(--ink-3)}
+.kv dd{margin:0;font-size:var(--t-lab);color:var(--ink);font-variant-numeric:tabular-nums}
+.detail__why{display:flex;gap:6px;align-items:flex-start;font-size:var(--t-lab);color:var(--breach);max-width:80ch}
+.detail__why .ico{margin-top:2px;flex:0 0 auto}
+.detail__note,.detail__writes{font-size:var(--t-lab);color:var(--ink-2);max-width:80ch}
+.detail__writes .mono{font-size:var(--t-lab)}
+.detail__links{display:flex;flex-wrap:wrap;gap:var(--s3);align-items:center;font-size:var(--t-lab)}
+.lnk{color:var(--accent);text-decoration:underline;text-underline-offset:2px;position:relative}
+.lnk::after{content:"";position:absolute;inset:-8px -4px}
+.notconn{font-style:normal}
+
+/* ── lineage ────────────────────────────────────────────── */
+.lin-wrap{overflow-x:auto;padding:0 var(--s3) var(--s3)}
+.lin{display:block;max-width:100%;height:auto}
+.edge{fill:none;stroke:var(--rule);stroke-width:1.5}
+.edge.e--hot{stroke:var(--breach);stroke-width:2;stroke-dasharray:5 3}
+.node__bg{fill:var(--surface);stroke:var(--rule);stroke-width:1}
+.node__edge{fill:var(--rule)}
+.node__schema{font:400 12px var(--mono);fill:var(--ink-3)}
+.node__name{font:400 12px var(--mono);fill:var(--ink)}
+.node__word{font:400 12px var(--sans);fill:var(--ink-3)}
+.node--ok .node__edge{fill:var(--ok)}
+.node--ok .node__word{fill:var(--ok)}
+.node--risk .node__edge{fill:var(--risk)}
+.node--risk .node__word{fill:var(--risk)}
+.node--risk .node__bg{fill:var(--wash-risk)}
+.node--breach .node__edge{fill:var(--breach)}
+.node--breach .node__word{fill:var(--breach)}
+.node--breach .node__bg{fill:var(--wash-breach)}
+.node.is-link .node__bg{stroke:var(--ink);stroke-width:2}
+.node.is-sel .node__bg{stroke:var(--accent);stroke-width:2.5}
+.tree{list-style:none;margin:0;padding:0 var(--s3) var(--s3);display:none;flex-direction:column;gap:var(--s2)}
+.tree__step{border-left:2px solid var(--rule);padding:0 0 0 var(--s3)}
+.tree__lvl{font-size:var(--t-micro);color:var(--ink-3)}
+.tree__nodes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--s1)}
+.tree__node{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s2);align-items:baseline;font-size:var(--t-lab)}
+.tree__node .mono{font-size:var(--t-lab)}
+.tree__node.is-link{font-weight:600}
+
+/* ── incidents ──────────────────────────────────────────── */
+.incs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.inc{border-top:1px solid var(--rule-soft);padding:10px var(--s3);display:flex;flex-direction:column;gap:3px;
+  transition:background-color 110ms var(--out)}
+.inc:first-child{border-top:1px solid var(--rule)}
+.inc.is-link{background:var(--inset)}
+.inc.is-target{box-shadow:inset 3px 0 0 var(--accent)}
+.inc__top{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s3);align-items:center}
+.inc__title{flex:1 1 320px;min-width:0;font-size:var(--t-body);font-weight:600}
+.sev{display:inline-flex;align-items:center;gap:5px;font-size:var(--t-lab);white-space:nowrap}
+.sev--1{color:var(--breach);font-weight:600}
+.sev--2{color:var(--risk)}
+.sev--3{color:var(--ink-2)}
+.inc__meta{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s4);font-size:var(--t-lab);color:var(--ink-2)}
+.inc__meta .mono{font-size:var(--t-lab)}
+.inc__k{color:var(--ink-3);font-size:var(--t-micro)}
+.inc__f{display:flex;gap:5px;align-items:baseline}
+.inc__why,.inc__ackd{font-size:var(--t-lab);color:var(--ink-3)}
+.inc__ackd{color:var(--ok)}
+
+/* ── states ─────────────────────────────────────────────── */
+.note{display:flex;flex-direction:column;gap:var(--s2);align-items:flex-start;padding:var(--s4) var(--s3) var(--s5);max-width:62ch}
+.note h3{font-size:var(--t-body)}
+.note p{font-size:var(--t-lab);color:var(--ink-2)}
+.note--err h3{color:var(--breach)}
+.skel{padding:0 var(--s3) var(--s3)}
+.skel__r{height:var(--row);border-bottom:1px solid var(--rule-soft);display:flex;align-items:center;gap:var(--s4)}
+.skel__b{height:10px;border-radius:var(--r-sm);background:var(--inset)}
+.inline-note{font-size:var(--t-lab);color:var(--ink-3)}
+
+/* first paint: one staged entrance, never on interaction */
+@keyframes rise{from{opacity:0;transform:translateY(10px);filter:blur(4px)}to{opacity:1;transform:none;filter:blur(0)}}
+.rise{animation:rise 460ms var(--out) both}
+.rise-1{animation-delay:0ms}.rise-2{animation-delay:90ms}.rise-3{animation-delay:180ms}.rise-4{animation-delay:270ms}
+
+/* ── responsive ─────────────────────────────────────────── */
+@media (max-width:1180px){
+  .c-team,.c-rows,.c-name .t-sub,.axis__key{display:none}
+  .c-name{width:34%}.fresh .c-name{width:32%}
+  .verdict{grid-template-columns:minmax(0,1fr)}
+  .verdict__q{max-width:30ch}
+}
+@media (max-width:1024px){
+  .lin-wrap{display:none}
+  .tree{display:flex}
+}
+@media (max-width:760px){
+  :root{--t-xl:60px;--t-md:24px;--row:44px}
+  .wrap{padding:0 var(--s3) var(--s5)}
+  .c-bar,.c-loaded{display:none}
+  .c-name{width:46%}.fresh .c-name{width:42%}
+  thead .c-num{width:16%}thead .c-state{width:22%}
+  .fresh thead .c-num{width:18%}.fresh thead .c-state{width:22%}
+  .axis{gap:var(--s3);padding:var(--s2)}
+  .axis__scale{display:none}
+  .axis__lab{flex-direction:row;gap:var(--s2);align-items:baseline;flex-wrap:wrap}
+  .panel__head{padding:var(--s3) var(--s2) var(--s2)}
+  .incs,.tree,.skel{padding-left:var(--s2);padding-right:var(--s2)}
+  tbody td,thead th{padding:0 6px}
+  .srch input{width:100%;max-width:none}
+  .srch{flex:1 1 160px}
+  select{width:100%}
+  .field{flex:1 1 150px}
+  .mast__tools{width:100%}
+  .axis__now{margin-left:auto}
+  .rowbtn__name{font-size:var(--t-lab);white-space:normal;overflow:visible;overflow-wrap:anywhere}
+  .rowbtn__sub{flex-wrap:wrap;gap:0 var(--s2)}
+  .rowbtn__sub>span{overflow:visible;white-space:normal}
+  .rowbtn{padding:6px 0}
+  .wide-only{display:none}
+}
+@media (max-width:420px){
+  .c-name{width:36%}.fresh .c-name{width:34%}
+  thead .c-num{width:17%}thead .c-state{width:30%}
+  .fresh thead .c-num{width:18%}.fresh thead .c-state{width:30%}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:1ms!important;animation-delay:0ms!important;transition-duration:1ms!important}
+}
+
+/* state switches, driven only by a class or data attribute the script sets */
+[data-state=loading] .when-ready,[data-state=error] .when-ready,[data-state=empty] .when-ready{display:none}
+[data-state=loading] .dline,[data-state=loading] .imark,
+[data-state=error] .dline,[data-state=error] .imark,
+[data-state=empty] .dline,[data-state=empty] .imark{display:none}
+[data-state=loading] .fchip,[data-state=error] .fchip,[data-state=empty] .fchip,
+[data-state=loading] .panel__tools select,[data-state=loading] .panel__tools input{opacity:.45;pointer-events:none}
+[data-state=loading] .when-loading{display:block}
+[data-state=error] .when-error{display:flex}
+[data-state=empty] .when-empty{display:flex}
+.when-loading,.when-error,.when-empty,.when-partial,.when-noperm{display:none}
+[data-state=partial] #lineage .when-ready{display:none}
+[data-state=partial] #lineage .when-partial{display:flex}
+[data-state=noperm] .needs-inc{display:none}
+[data-state=noperm] .verdict [data-filter-breach]{background:var(--accent-lift);color:var(--band);font-weight:600;border-color:transparent}
+[data-state=noperm] .verdict [data-filter-breach]:hover{background:var(--accent-lift-hover);color:var(--band)}
+[data-state=noperm] #incidents .when-ready{display:none}
+[data-state=noperm] #incidents .when-noperm{display:flex}
+tr.is-out,li.is-out{display:none}
+</style>
+</head>
+<body data-state="ready">
+<div class="wrap">
+
+  <header class="mast rise rise-1">
+    <div class="mast__id">
+      <span class="mast__name"><b>Sluice</b><span class="mast__what">pipelines, freshness and incidents</span></span>
+      <span class="mast__env">
+        <span>warehouse <span class="mono">bigquery / eu-west-1 / prod</span></span>
+        <span>window <span class="mono">05:00–09:00 UTC</span></span>
+        <span>on call <span class="mono">R. O'Dwyer</span></span>
+      </span>
+    </div>
+    <div class="mast__tools">
+      <p class="fetched"><span class="fetched__fresh">read 08:41, 1m ago</span><span class="fetched__stale"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg>read 08:19, 23m ago, older than the 5m refresh</span></p>
+      <label class="field"><span>Preview a state</span>
+        <select id="statesel">
+          <option value="ready">Sample data, loaded</option>
+          <option value="loading">Loading</option>
+          <option value="empty">First use, nothing connected</option>
+          <option value="error">The read failed</option>
+          <option value="partial">Lineage service down</option>
+          <option value="noperm">Incidents restricted</option>
+          <option value="single">One pipeline only</option>
+          <option value="stale">Data older than the refresh</option>
+        </select>
+      </label>
+      <button type="button" class="btn btn--quiet" id="reload">Reload sample</button>
+    </div>
+  </header>
+
+  <p class="sample"><b>Sample data.</b><span>Every run, table and incident below is made up and frozen at 2026-11-01 08:42 UTC. Reload re-renders the same rows; nothing is fetched, acknowledged or paged.</span></p>
+
+  <section class="verdict rise rise-2" aria-labelledby="verdict-h">
+    <div class="verdict__fig when-ready">
+      <span class="verdict__n" id="breachn">4</span>
+      <span class="verdict__q"><b id="verdict-h">tables past their freshness deadline</b>right now, out of 28 tracked</span>
+    </div>
+    <div class="verdict__body when-ready">
+      <p class="verdict__line"><span class="mono">analytics_prod.mart_finance_revenue_eu</span> is 1h 42m past its 07:00 deadline, so the 09:00 finance pack is not safe.</p>
+      <div class="verdict__row">
+        <span class="stat"><b>3</b><span>runs failed</span></span>
+        <span class="stat"><b>1</b><span>running past its window</span></span>
+        <span class="stat"><b>4</b><span>queued behind an upstream run</span></span>
+        <span class="stat needs-inc"><b>1</b><span>open at severity 1</span></span>
+        <span class="verdict__act">
+          <button type="button" class="btn btn--primary needs-inc" data-jump-inc="INC-2291">Open INC-2291</button>
+          <button type="button" class="btn btn--quiet" data-filter-breach="1">Show the 4 tables</button>
+        </span>
+      </div>
+    </div>
+    <p class="verdict__alt when-loading">Reading the scheduler and the warehouse. No count is shown until both answer.</p>
+    <p class="verdict__alt when-error">Nothing could be read at 08:42, so this page cannot say how many tables are late. Each panel below names the source that failed.</p>
+    <p class="verdict__alt when-empty">Nothing is connected yet. Connect a scheduler and track one table, and the count appears here.</p>
+  </section>
+
+  
+<div class="axis" id="axis">
+  <div class="axis__lab">
+    <span class="axis__name">Batch window</span>
+    <span class="axis__range mono">05:00–09:00 UTC</span>
+  </div>
+  <div class="axis__scale" aria-hidden="true">
+    <span class="tick tick--hour" style="left:0%"></span><span class="tick" style="left:12.5%"></span><span class="tick tick--hour" style="left:25%"></span><span class="tick" style="left:37.5%"></span><span class="tick tick--hour" style="left:50%"></span><span class="tick" style="left:62.5%"></span><span class="tick tick--hour" style="left:75%"></span><span class="tick" style="left:87.5%"></span><span class="tick tick--hour" style="left:100%"></span>
+    <span class="tick__t mono" style="left:0%">05:00</span><span class="tick__t mono" style="left:25%">06:00</span><span class="tick__t mono" style="left:50%">07:00</span><span class="tick__t mono" style="left:75%">08:00</span><span class="tick__t mono tick__t--end" style="left:100%">09:00</span>
+    <span class="dline" style="left:12.5%" data-table="t_raw_stripe_charges" title="raw_prod.stripe_charges due 05:30"></span><span class="dline" style="left:37.5%" data-table="t_fct_subscription_revenue_daily" title="analytics_prod.fct_subscription_revenue_daily due 06:30"></span><span class="dline" style="left:50%" data-table="t_mart_finance_revenue_eu" title="analytics_prod.mart_finance_revenue_eu due 07:00"></span><span class="dline" style="left:75%" data-table="t_raw_salesforce_opportunity" title="raw_prod.salesforce_opportunity due 08:00"></span><span class="dline" style="left:93.75%" data-table="t_stg_clickstream_sessions" title="analytics_prod.stg_clickstream_sessions due 08:45"></span><span class="dline" style="left:100%" data-table="t_fct_product_adoption_weekly" title="analytics_prod.fct_product_adoption_weekly due 09:15"></span><span class="dline" style="left:100%" data-table="t_dim_salesforce_account" title="analytics_prod.dim_salesforce_account due 09:00"></span><span class="dline" style="left:100%" data-table="t_propensity_scores_eu_west_1" title="ml_prod.propensity_scores_eu_west_1 due 09:30"></span>
+    <span class="imark" style="left:75.417%" data-inc="INC-2291" title="INC-2291 opened 08:01: Stripe charges ingest rejects the new disputes column"></span><span class="imark" style="left:84.583%" data-inc="INC-2294" title="INC-2294 opened 08:23: 4 of 212 expectations failed on the revenue fact"></span><span class="imark" style="left:7.5%" data-inc="INC-2288" title="INC-2288 opened 05:18: Clickstream consumer lag above 40 minutes"></span>
+    <span class="nowline" style="left:92.5%"></span>
+    <span class="guide" id="guide" hidden></span>
+  </div>
+  <p class="axis__key"><span class="axis__keyi"><span class="axis__tri"></span>incident opened</span><span class="axis__keyi"><span class="axis__dl"></span>freshness deadline</span></p>
+  <p class="axis__now"><span class="axis__nowk">now</span> <span class="mono">08:42</span></p>
+  <p class="sr">The window runs from 05:00 to 09:00 UTC and the sample is frozen at 08:42. Upright red marks are the 8 deadlines that have passed or are close. Dark marks are the 3 incidents opened inside the window: INC-2291 at 08:01, INC-2294 at 08:23, INC-2288 at 05:18.</p>
+</div>
+
+  <!-- pipeline runs ------------------------------------------------- -->
+  <section class="panel rise rise-3" id="runs" aria-labelledby="runs-h">
+    <div class="panel__head">
+      <div class="panel__id">
+        <h2 id="runs-h">Pipeline runs<span class="panel__count when-ready" id="runs-count">27 of 27</span></h2>
+        <p class="panel__sub when-ready"><span class="wide-only">Bars sit on the window above. </span>Select a run to see why it stopped and what it writes.</p>
+      </div>
+      <div class="panel__tools">
+        <div class="chips" role="group" aria-label="Filter runs by state">
+          <button type="button" class="fchip" data-rs="all" aria-pressed="true">All</button>
+          <button type="button" class="fchip" data-rs="failed" aria-pressed="false">Failed <span class="when-ready">(3)</span></button>
+          <button type="button" class="fchip" data-rs="late" aria-pressed="false">Late <span class="when-ready">(1)</span></button>
+          <button type="button" class="fchip" data-rs="running" aria-pressed="false">Running <span class="when-ready">(2)</span></button>
+          <button type="button" class="fchip" data-rs="queued" aria-pressed="false">Queued <span class="when-ready">(4)</span></button>
+          <button type="button" class="fchip" data-rs="ok" aria-pressed="false">Landed <span class="when-ready">(16)</span></button>
+        </div>
+        <label class="field"><span class="sr">Team</span>
+          <select id="teamsel" aria-label="Filter runs by team">
+            <option value="all">Every team</option>
+            <option value="Commerce Data">Commerce Data</option><option value="Core Data">Core Data</option><option value="Customer Lifecycle &amp; Retention Analytics">Customer Lifecycle &amp; Retention Analytics</option><option value="Finance Systems">Finance Systems</option><option value="Growth Analytics">Growth Analytics</option><option value="ML Platform">ML Platform</option><option value="Payments Data">Payments Data</option><option value="People Analytics">People Analytics</option><option value="Platform">Platform</option><option value="Revenue Ops">Revenue Ops</option>
+          </select>
+        </label>
+        <div class="srch"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6.2" cy="6.2" r="3.8"/><path d="M9.2 9.2 12 12"/></svg><label class="sr" for="runq">Search runs</label><input type="search" id="runq" placeholder="pipeline, team, run id"></div>
+      </div>
+    </div>
+    <div class="when-ready">
+      <div class="tbl-scroll">
+        <table class="runs">
+          <caption class="sr">Pipeline runs in the 05:00 to 09:00 UTC window</caption>
+          <thead><tr>
+            <th class="c-name" scope="col">Pipeline</th>
+            <th class="c-team" scope="col">Team</th>
+            <th class="c-num" scope="col">Start</th>
+            <th class="c-num" scope="col">Ran</th>
+            <th class="c-bar" scope="col">On the window</th>
+            <th class="c-rows" scope="col">Rows</th>
+            <th class="c-state" scope="col">State</th>
+          </tr></thead>
+          <tbody id="runs-body"><tr class="row" data-run="run_8862" data-state="failed" data-team="Platform" data-q="quality.great_expectations_suite platform aarav nair run_8862">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8862" aria-expanded="false" aria-controls="d_run_8862" title="quality.great_expectations_suite"><span class="rowbtn__name">quality.great_expectations_suite</span><span class="rowbtn__sub"><span>run_8862</span></span></button></td>
+  <td class="c-team"><span class="t-team">Platform</span><span class="t-sub">Aarav Nair</span></td>
+  <td class="c-num">08:12</td>
+  <td class="c-num">9m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--failed" style="left:80%;width:3.75%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--failed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.4 3.4 10.6 10.6M10.6 3.4 3.4 10.6"/></svg><span>failed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8862" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8862</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">08:12</dd></div>
+        <div><dt>Finished</dt><dd class="mono">08:21</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">0</dd></div>
+        <div><dt>On call</dt><dd>Aarav Nair</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>4 of 212 expectations failed, all on analytics_prod.fct_subscription_revenue_daily.</span></p>
+      
+      <p class="detail__writes">Writes <span class="mono">quality_prod.expectation_results</span></p>
+      <p class="detail__links"><a class="lnk" href="#INC-2294" data-jump-inc="INC-2294">Incident INC-2294</a><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8846" data-state="failed" data-team="Finance Systems" data-q="dbt.fct_subscription_revenue_daily finance systems sofia nurmi run_8846">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8846" aria-expanded="false" aria-controls="d_run_8846" title="dbt.fct_subscription_revenue_daily"><span class="rowbtn__name">dbt.fct_subscription_revenue_daily</span><span class="rowbtn__sub"><span>run_8846</span><span class="rowbtn__att">attempt 2</span></span></button></td>
+  <td class="c-team"><span class="t-team">Finance Systems</span><span class="t-sub">Sofia Nurmi</span></td>
+  <td class="c-num">06:12</td>
+  <td class="c-num">9m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--failed" style="left:30%;width:3.75%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--failed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.4 3.4 10.6 10.6M10.6 3.4 3.4 10.6"/></svg><span>failed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8846" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8846</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">2</dd></div>
+        <div><dt>Started</dt><dd class="mono">06:12</dd></div>
+        <div><dt>Finished</dt><dd class="mono">06:21</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">0</dd></div>
+        <div><dt>On call</dt><dd>Sofia Nurmi</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Upstream partition raw_prod.stripe_charges/2026-11-01 is missing.</span></p>
+      
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.fct_subscription_revenue_daily</span></p>
+      <p class="detail__links"><a class="lnk" href="#INC-2291" data-jump-inc="INC-2291">Incident INC-2291</a><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8841" data-state="failed" data-team="Payments Data" data-q="ingest.stripe_charges payments data r. o&#39;dwyer run_8841">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8841" aria-expanded="false" aria-controls="d_run_8841" title="ingest.stripe_charges"><span class="rowbtn__name">ingest.stripe_charges</span><span class="rowbtn__sub"><span>run_8841</span><span class="rowbtn__att">attempt 3</span></span></button></td>
+  <td class="c-team"><span class="t-team">Payments Data</span><span class="t-sub">R. O'Dwyer</span></td>
+  <td class="c-num">05:02</td>
+  <td class="c-num">17m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--failed" style="left:0.833%;width:7.083%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--failed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.4 3.4 10.6 10.6M10.6 3.4 3.4 10.6"/></svg><span>failed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8841" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8841</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">3</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:02</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:19</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">0</dd></div>
+        <div><dt>On call</dt><dd>R. O'Dwyer</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Rejected 1 of 14 columns: disputes.network_reason_code is new and not in the target schema.</span></p>
+      
+      <p class="detail__writes">Writes <span class="mono">raw_prod.stripe_charges</span></p>
+      <p class="detail__links"><a class="lnk" href="#INC-2291" data-jump-inc="INC-2291">Incident INC-2291</a><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8850" data-state="late" data-team="Platform" data-q="ingest.kafka_clickstream_compact platform aarav nair run_8850">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8850" aria-expanded="false" aria-controls="d_run_8850" title="ingest.kafka_clickstream_compact"><span class="rowbtn__name">ingest.kafka_clickstream_compact</span><span class="rowbtn__sub"><span>run_8850</span></span></button></td>
+  <td class="c-team"><span class="t-team">Platform</span><span class="t-sub">Aarav Nair</span></td>
+  <td class="c-num">04:50</td>
+  <td class="c-num">3h 52m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--late bar--clip" style="left:0%;width:92.5%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">51,200,391</td>
+  <td class="c-state"><span class="chip chip--late"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2V7l2.2 1.6"/></svg><span>late</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8850" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8850</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">04:50</dd></div>
+        <div><dt>Finished</dt><dd class="mono">—</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">51,200,391</dd></div>
+        <div><dt>On call</dt><dd>Aarav Nair</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Started 04:50, budget 60m. Consumer lag 41m and not falling.</span></p>
+      
+      <p class="detail__writes">Writes <span class="mono">raw_prod.kafka_clickstream_events</span></p>
+      <p class="detail__links"><a class="lnk" href="#INC-2288" data-jump-inc="INC-2288">Incident INC-2288</a><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8856" data-state="retrying" data-team="Revenue Ops" data-q="ingest.salesforce_opportunity revenue ops priya ramanathan run_8856">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8856" aria-expanded="false" aria-controls="d_run_8856" title="ingest.salesforce_opportunity"><span class="rowbtn__name">ingest.salesforce_opportunity</span><span class="rowbtn__sub"><span>run_8856</span><span class="rowbtn__att">attempt 4</span></span></button></td>
+  <td class="c-team"><span class="t-team">Revenue Ops</span><span class="t-sub">Priya Ramanathan</span></td>
+  <td class="c-num">08:25</td>
+  <td class="c-num">17m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--retrying" style="left:85.417%;width:7.083%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--retrying"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.4 7a4.4 4.4 0 1 1-1.5-3.3"/><path d="M11.6 1.9v2.6H9"/></svg><span>retrying</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8856" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8856</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">4</dd></div>
+        <div><dt>Started</dt><dd class="mono">08:25</dd></div>
+        <div><dt>Finished</dt><dd class="mono">—</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">0</dd></div>
+        <div><dt>On call</dt><dd>Priya Ramanathan</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>API limit reached at 04:43. Retry 4 of 6, backoff 15m.</span></p>
+      
+      <p class="detail__writes">Writes <span class="mono">raw_prod.salesforce_opportunity</span></p>
+      <p class="detail__links"><a class="lnk" href="#INC-2286" data-jump-inc="INC-2286">Incident INC-2286</a><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8861" data-state="running" data-team="ML Platform" data-q="ml.retrain_propensity_eu_west_1 ml platform idris bello run_8861">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8861" aria-expanded="false" aria-controls="d_run_8861" title="ml.retrain_propensity_eu_west_1"><span class="rowbtn__name">ml.retrain_propensity_eu_west_1</span><span class="rowbtn__sub"><span>run_8861</span></span></button></td>
+  <td class="c-team"><span class="t-team">ML Platform</span><span class="t-sub">Idris Bello</span></td>
+  <td class="c-num">08:30</td>
+  <td class="c-num">12m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--running" style="left:87.5%;width:5%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--running"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.6"/><path d="M5.9 4.9 9.3 7 5.9 9.1Z" fill="currentColor" stroke="none"/></svg><span>running</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8861" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8861</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">08:30</dd></div>
+        <div><dt>Finished</dt><dd class="mono">—</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">0</dd></div>
+        <div><dt>On call</dt><dd>Idris Bello</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">ml_prod.propensity_scores_eu_west_1</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8857" data-state="queued" data-team="Revenue Ops" data-q="reverse_etl.salesforce_accounts revenue ops priya ramanathan run_8857">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8857" aria-expanded="false" aria-controls="d_run_8857" title="reverse_etl.salesforce_accounts"><span class="rowbtn__name">reverse_etl.salesforce_accounts</span><span class="rowbtn__sub"><span>run_8857</span></span></button></td>
+  <td class="c-team"><span class="t-team">Revenue Ops</span><span class="t-sub">Priya Ramanathan</span></td>
+  <td class="c-num">—</td>
+  <td class="c-num">—</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--queued" style="left:87.5%;width:3%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--queued"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M4.6 7h4.8"/></svg><span>queued</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8857" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8857</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">not started</dd></div>
+        <div><dt>Finished</dt><dd class="mono">—</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">0</dd></div>
+        <div><dt>On call</dt><dd>Priya Ramanathan</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Blocked on ingest.salesforce_opportunity.</span></p>
+      
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.dim_salesforce_account</span></p>
+      <p class="detail__links"><a class="lnk" href="#INC-2286" data-jump-inc="INC-2286">Incident INC-2286</a><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8847" data-state="queued" data-team="Finance Systems" data-q="dbt.mart_finance_revenue_eu finance systems sofia nurmi run_8847">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8847" aria-expanded="false" aria-controls="d_run_8847" title="dbt.mart_finance_revenue_eu"><span class="rowbtn__name">dbt.mart_finance_revenue_eu</span><span class="rowbtn__sub"><span>run_8847</span></span></button></td>
+  <td class="c-team"><span class="t-team">Finance Systems</span><span class="t-sub">Sofia Nurmi</span></td>
+  <td class="c-num">—</td>
+  <td class="c-num">—</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--queued" style="left:34.167%;width:3%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--queued"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M4.6 7h4.8"/></svg><span>queued</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8847" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8847</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">not started</dd></div>
+        <div><dt>Finished</dt><dd class="mono">—</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">0</dd></div>
+        <div><dt>On call</dt><dd>Sofia Nurmi</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Blocked on dbt.fct_subscription_revenue_daily.</span></p>
+      
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.mart_finance_revenue_eu</span></p>
+      <p class="detail__links"><a class="lnk" href="#INC-2291" data-jump-inc="INC-2291">Incident INC-2291</a><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8852" data-state="queued" data-team="Growth Analytics" data-q="dbt.fct_product_adoption_weekly growth analytics lena oduya run_8852">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8852" aria-expanded="false" aria-controls="d_run_8852" title="dbt.fct_product_adoption_weekly"><span class="rowbtn__name">dbt.fct_product_adoption_weekly</span><span class="rowbtn__sub"><span>run_8852</span></span></button></td>
+  <td class="c-team"><span class="t-team">Growth Analytics</span><span class="t-sub">Lena Oduya</span></td>
+  <td class="c-num">—</td>
+  <td class="c-num">—</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--queued" style="left:27.5%;width:3%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--queued"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M4.6 7h4.8"/></svg><span>queued</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8852" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8852</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">not started</dd></div>
+        <div><dt>Finished</dt><dd class="mono">—</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">0</dd></div>
+        <div><dt>On call</dt><dd>Lena Oduya</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Blocked on dbt.stg_clickstream_sessions.</span></p>
+      
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.fct_product_adoption_weekly</span></p>
+      <p class="detail__links"><a class="lnk" href="#INC-2288" data-jump-inc="INC-2288">Incident INC-2288</a><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8851" data-state="queued" data-team="Growth Analytics" data-q="dbt.stg_clickstream_sessions growth analytics lena oduya run_8851">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8851" aria-expanded="false" aria-controls="d_run_8851" title="dbt.stg_clickstream_sessions"><span class="rowbtn__name">dbt.stg_clickstream_sessions</span><span class="rowbtn__sub"><span>run_8851</span></span></button></td>
+  <td class="c-team"><span class="t-team">Growth Analytics</span><span class="t-sub">Lena Oduya</span></td>
+  <td class="c-num">—</td>
+  <td class="c-num">—</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--queued" style="left:25%;width:3%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--queued"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M4.6 7h4.8"/></svg><span>queued</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8851" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8851</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">not started</dd></div>
+        <div><dt>Finished</dt><dd class="mono">—</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">0</dd></div>
+        <div><dt>On call</dt><dd>Lena Oduya</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Blocked on ingest.kafka_clickstream_compact.</span></p>
+      
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.stg_clickstream_sessions</span></p>
+      <p class="detail__links"><a class="lnk" href="#INC-2288" data-jump-inc="INC-2288">Incident INC-2288</a><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8866" data-state="cancelled" data-team="Platform" data-q="ingest.bigquery_cost_export platform aarav nair run_8866">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8866" aria-expanded="false" aria-controls="d_run_8866" title="ingest.bigquery_cost_export"><span class="rowbtn__name">ingest.bigquery_cost_export</span><span class="rowbtn__sub"><span>run_8866</span></span></button></td>
+  <td class="c-team"><span class="t-team">Platform</span><span class="t-sub">Aarav Nair</span></td>
+  <td class="c-num">05:01</td>
+  <td class="c-num">5m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--cancelled" style="left:0.417%;width:2.083%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--cancelled"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M4.2 4.2 9.8 9.8"/></svg><span>cancelled</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8866" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8866</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:01</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:06</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">0</dd></div>
+        <div><dt>On call</dt><dd>Aarav Nair</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Superseded by the 10:30 run after the export window moved.</span></p>
+      
+      <p class="detail__writes">Writes no table.</p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8867" data-state="ok" data-team="Core Data" data-q="dbt.fct_usage_metered_hourly core data wei chen run_8867">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8867" aria-expanded="false" aria-controls="d_run_8867" title="dbt.fct_usage_metered_hourly"><span class="rowbtn__name">dbt.fct_usage_metered_hourly</span><span class="rowbtn__sub"><span>run_8867</span></span></button></td>
+  <td class="c-team"><span class="t-team">Core Data</span><span class="t-sub">Wei Chen</span></td>
+  <td class="c-num">08:20</td>
+  <td class="c-num">17m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:83.333%;width:7.083%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">7,410,233</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8867" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8867</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">08:20</dd></div>
+        <div><dt>Finished</dt><dd class="mono">08:37</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">7,410,233</dd></div>
+        <div><dt>On call</dt><dd>Wei Chen</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.fct_usage_metered_hourly</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8860" data-state="ok" data-team="ML Platform" data-q="ml.feature_store_churn_v4 ml platform idris bello run_8860">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8860" aria-expanded="false" aria-controls="d_run_8860" title="ml.feature_store_churn_v4"><span class="rowbtn__name">ml.feature_store_churn_v4</span><span class="rowbtn__sub"><span>run_8860</span></span></button></td>
+  <td class="c-team"><span class="t-team">ML Platform</span><span class="t-sub">Idris Bello</span></td>
+  <td class="c-num">08:00</td>
+  <td class="c-num">30m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:75%;width:12.5%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">55,210</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8860" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8860</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">08:00</dd></div>
+        <div><dt>Finished</dt><dd class="mono">08:30</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">55,210</dd></div>
+        <div><dt>On call</dt><dd>Idris Bello</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">ml_prod.feature_store_churn_v4</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8863" data-state="ok" data-team="Growth Analytics" data-q="export.looker_pdt_rebuild growth analytics lena oduya run_8863">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8863" aria-expanded="false" aria-controls="d_run_8863" title="export.looker_pdt_rebuild"><span class="rowbtn__name">export.looker_pdt_rebuild</span><span class="rowbtn__sub"><span>run_8863</span></span></button></td>
+  <td class="c-team"><span class="t-team">Growth Analytics</span><span class="t-sub">Lena Oduya</span></td>
+  <td class="c-num">07:50</td>
+  <td class="c-num">16m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:70.833%;width:6.667%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8863" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8863</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">07:50</dd></div>
+        <div><dt>Finished</dt><dd class="mono">08:06</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">0</dd></div>
+        <div><dt>On call</dt><dd>Lena Oduya</dd></div>
+      </dl>
+      
+      <p class="detail__note">Rebuilt 0 rows: every persistent derived table was already current.</p>
+      <p class="detail__writes">Writes no table.</p>
+      <p class="detail__links"><a class="lnk" href="#INC-2279" data-jump-inc="INC-2279">Incident INC-2279</a><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8855" data-state="ok" data-team="Growth Analytics" data-q="dbt.fct_marketing_attribution growth analytics mihail vukovic run_8855">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8855" aria-expanded="false" aria-controls="d_run_8855" title="dbt.fct_marketing_attribution"><span class="rowbtn__name">dbt.fct_marketing_attribution</span><span class="rowbtn__sub"><span>run_8855</span></span></button></td>
+  <td class="c-team"><span class="t-team">Growth Analytics</span><span class="t-sub">Mihail Vukovic</span></td>
+  <td class="c-num">07:00</td>
+  <td class="c-num">48m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:50%;width:20%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">2,104,887</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8855" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8855</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">07:00</dd></div>
+        <div><dt>Finished</dt><dd class="mono">07:48</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">2,104,887</dd></div>
+        <div><dt>On call</dt><dd>Mihail Vukovic</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.fct_marketing_attribution</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8845" data-state="ok" data-team="Core Data" data-q="dbt.dim_customer core data wei chen run_8845">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8845" aria-expanded="false" aria-controls="d_run_8845" title="dbt.dim_customer"><span class="rowbtn__name">dbt.dim_customer</span><span class="rowbtn__sub"><span>run_8845</span></span></button></td>
+  <td class="c-team"><span class="t-team">Core Data</span><span class="t-sub">Wei Chen</span></td>
+  <td class="c-num">05:58</td>
+  <td class="c-num">14m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:24.167%;width:5.833%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">310,882</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8845" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8845</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:58</dd></div>
+        <div><dt>Finished</dt><dd class="mono">06:12</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">310,882</dd></div>
+        <div><dt>On call</dt><dd>Wei Chen</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.dim_customer</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8844" data-state="ok" data-team="Core Data" data-q="dbt.stg_subscription_events core data wei chen run_8844">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8844" aria-expanded="false" aria-controls="d_run_8844" title="dbt.stg_subscription_events"><span class="rowbtn__name">dbt.stg_subscription_events</span><span class="rowbtn__sub"><span>run_8844</span></span></button></td>
+  <td class="c-team"><span class="t-team">Core Data</span><span class="t-sub">Wei Chen</span></td>
+  <td class="c-num">05:45</td>
+  <td class="c-num">13m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:18.75%;width:5.417%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">902,144</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8844" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8844</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:45</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:58</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">902,144</dd></div>
+        <div><dt>On call</dt><dd>Wei Chen</dd></div>
+      </dl>
+      
+      <p class="detail__note">Landed, but read raw_prod.stripe_charges at yesterday's partition.</p>
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.stg_subscription_events</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8849" data-state="ok" data-team="Finance Systems" data-q="dbt.fct_gl_journal finance systems tomás herrera run_8849">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8849" aria-expanded="false" aria-controls="d_run_8849" title="dbt.fct_gl_journal"><span class="rowbtn__name">dbt.fct_gl_journal</span><span class="rowbtn__sub"><span>run_8849</span></span></button></td>
+  <td class="c-team"><span class="t-team">Finance Systems</span><span class="t-sub">Tomás Herrera</span></td>
+  <td class="c-num">05:36</td>
+  <td class="c-num">13m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:15%;width:5.417%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">71,204</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8849" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8849</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:36</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:49</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">71,204</dd></div>
+        <div><dt>On call</dt><dd>Tomás Herrera</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.fct_gl_journal</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8859" data-state="ok" data-team="Customer Lifecycle &amp; Retention Analytics" data-q="dbt.fct_order_lines_eu_west_1__backfill_v3_20261101 customer lifecycle &amp; retention analytics marguerite vandenbroucke-oyelaran run_8859">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8859" aria-expanded="false" aria-controls="d_run_8859" title="dbt.fct_order_lines_eu_west_1__backfill_v3_20261101"><span class="rowbtn__name">dbt.fct_order_lines_eu_west_1__backfill_v3_20261101</span><span class="rowbtn__sub"><span>run_8859</span></span></button></td>
+  <td class="c-team"><span class="t-team">Customer Lifecycle &amp; Retention Analytics</span><span class="t-sub">Marguerite Vandenbroucke-Oyelaran</span></td>
+  <td class="c-num">05:30</td>
+  <td class="c-num">3h 09m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:12.5%;width:78.75%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">184,203,991</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8859" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8859</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:30</dd></div>
+        <div><dt>Finished</dt><dd class="mono">08:39</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">184,203,991</dd></div>
+        <div><dt>On call</dt><dd>Marguerite Vandenbroucke-Oyelaran</dd></div>
+      </dl>
+      
+      <p class="detail__note">Backfill of 1,096 partitions. Ran 3h 09m against a 4h budget.</p>
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.fct_order_lines_eu_west_1__backfill_v3</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8854" data-state="ok" data-team="Growth Analytics" data-q="ingest.braze_campaign_sends growth analytics mihail vukovic run_8854">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8854" aria-expanded="false" aria-controls="d_run_8854" title="ingest.braze_campaign_sends"><span class="rowbtn__name">ingest.braze_campaign_sends</span><span class="rowbtn__sub"><span>run_8854</span></span></button></td>
+  <td class="c-team"><span class="t-team">Growth Analytics</span><span class="t-sub">Mihail Vukovic</span></td>
+  <td class="c-num">05:18</td>
+  <td class="c-num">12m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:7.5%;width:5%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">88,431</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8854" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8854</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:18</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:30</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">88,431</dd></div>
+        <div><dt>On call</dt><dd>Mihail Vukovic</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">raw_prod.braze_campaign_sends</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8853" data-state="ok" data-team="Growth Analytics" data-q="ingest.appsflyer_installs growth analytics lena oduya run_8853">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8853" aria-expanded="false" aria-controls="d_run_8853" title="ingest.appsflyer_installs"><span class="rowbtn__name">ingest.appsflyer_installs</span><span class="rowbtn__sub"><span>run_8853</span></span></button></td>
+  <td class="c-team"><span class="t-team">Growth Analytics</span><span class="t-sub">Lena Oduya</span></td>
+  <td class="c-num">05:15</td>
+  <td class="c-num">12m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:6.25%;width:5%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">12,904</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8853" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8853</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:15</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:27</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">12,904</dd></div>
+        <div><dt>On call</dt><dd>Lena Oduya</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">raw_prod.appsflyer_installs</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8865" data-state="ok" data-team="People Analytics" data-q="dbt.dim_employee people analytics nadia haddad run_8865">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8865" aria-expanded="false" aria-controls="d_run_8865" title="dbt.dim_employee"><span class="rowbtn__name">dbt.dim_employee</span><span class="rowbtn__sub"><span>run_8865</span></span></button></td>
+  <td class="c-team"><span class="t-team">People Analytics</span><span class="t-sub">Nadia Haddad</span></td>
+  <td class="c-num">05:09</td>
+  <td class="c-num">5m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:3.75%;width:2.083%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">1,842</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8865" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8865</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:09</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:14</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">1,842</dd></div>
+        <div><dt>On call</dt><dd>Nadia Haddad</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">analytics_prod.dim_employee</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8842" data-state="ok" data-team="Payments Data" data-q="ingest.stripe_disputes payments data r. o&#39;dwyer run_8842">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8842" aria-expanded="false" aria-controls="d_run_8842" title="ingest.stripe_disputes"><span class="rowbtn__name">ingest.stripe_disputes</span><span class="rowbtn__sub"><span>run_8842</span></span></button></td>
+  <td class="c-team"><span class="t-team">Payments Data</span><span class="t-sub">R. O'Dwyer</span></td>
+  <td class="c-num">05:05</td>
+  <td class="c-num">7m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:2.083%;width:2.917%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">1,182</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8842" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8842</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:05</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:12</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">1,182</dd></div>
+        <div><dt>On call</dt><dd>R. O'Dwyer</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">raw_prod.stripe_disputes</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8843" data-state="ok" data-team="Finance Systems" data-q="ingest.zuora_invoices finance systems sofia nurmi run_8843">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8843" aria-expanded="false" aria-controls="d_run_8843" title="ingest.zuora_invoices"><span class="rowbtn__name">ingest.zuora_invoices</span><span class="rowbtn__sub"><span>run_8843</span></span></button></td>
+  <td class="c-team"><span class="t-team">Finance Systems</span><span class="t-sub">Sofia Nurmi</span></td>
+  <td class="c-num">05:00</td>
+  <td class="c-num">41m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:0%;width:17.083%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">48,221</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8843" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8843</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:00</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:41</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">48,221</dd></div>
+        <div><dt>On call</dt><dd>Sofia Nurmi</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">raw_prod.zuora_invoices</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8848" data-state="ok" data-team="Finance Systems" data-q="ingest.netsuite_gl finance systems tomás herrera run_8848">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8848" aria-expanded="false" aria-controls="d_run_8848" title="ingest.netsuite_gl"><span class="rowbtn__name">ingest.netsuite_gl</span><span class="rowbtn__sub"><span>run_8848</span></span></button></td>
+  <td class="c-team"><span class="t-team">Finance Systems</span><span class="t-sub">Tomás Herrera</span></td>
+  <td class="c-num">05:00</td>
+  <td class="c-num">34m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:0%;width:14.167%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">71,204</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8848" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8848</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:00</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:34</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">71,204</dd></div>
+        <div><dt>On call</dt><dd>Tomás Herrera</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">raw_prod.netsuite_gl</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8858" data-state="ok" data-team="Commerce Data" data-q="ingest.shopify_orders_apac commerce data hana kobayashi run_8858">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8858" aria-expanded="false" aria-controls="d_run_8858" title="ingest.shopify_orders_apac"><span class="rowbtn__name">ingest.shopify_orders_apac</span><span class="rowbtn__sub"><span>run_8858</span></span></button></td>
+  <td class="c-team"><span class="t-team">Commerce Data</span><span class="t-sub">Hana Kobayashi</span></td>
+  <td class="c-num">05:00</td>
+  <td class="c-num">18m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:0%;width:7.5%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">23,119</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8858" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8858</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:00</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:18</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">23,119</dd></div>
+        <div><dt>On call</dt><dd>Hana Kobayashi</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">raw_prod.shopify_orders_apac</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr><tr class="row" data-run="run_8864" data-state="ok" data-team="People Analytics" data-q="ingest.workday_headcount people analytics nadia haddad run_8864">
+  <td class="c-name"><button type="button" class="rowbtn" id="b_run_8864" aria-expanded="false" aria-controls="d_run_8864" title="ingest.workday_headcount"><span class="rowbtn__name">ingest.workday_headcount</span><span class="rowbtn__sub"><span>run_8864</span></span></button></td>
+  <td class="c-team"><span class="t-team">People Analytics</span><span class="t-sub">Nadia Haddad</span></td>
+  <td class="c-num">05:00</td>
+  <td class="c-num">7m</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:0%;width:2.917%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">1,842</td>
+  <td class="c-state"><span class="chip chip--ok"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="d_run_8864" hidden>
+  <td colspan="7">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Run</dt><dd class="mono">run_8864</dd></div>
+        <div><dt>Attempt</dt><dd class="mono">1</dd></div>
+        <div><dt>Started</dt><dd class="mono">05:00</dd></div>
+        <div><dt>Finished</dt><dd class="mono">05:07</dd></div>
+        <div><dt>Rows written</dt><dd class="mono">1,842</dd></div>
+        <div><dt>On call</dt><dd>Nadia Haddad</dd></div>
+      </dl>
+      
+      
+      <p class="detail__writes">Writes <span class="mono">raw_prod.workday_headcount</span></p>
+      <p class="detail__links"><span class="t-sub">No incident on this run.</span><span class="t-sub notconn">Logs and re-run are not wired up in this sample.</span></p>
+    </div>
+  </td>
+</tr></tbody>
+        </table>
+      </div>
+      <div class="note when-filtered" id="runs-none" hidden>
+        <h3>No run matches these filters</h3>
+        <p id="runs-none-why"></p>
+        <button type="button" class="btn btn--quiet" data-clear="runs">Clear the run filters</button>
+      </div>
+    </div>
+    <div class="skel when-loading" aria-hidden="true"><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:11%"></span><span class="skel__b" style="width:6%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:21%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:11%"></span><span class="skel__b" style="width:6%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:21%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:11%"></span><span class="skel__b" style="width:6%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:21%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:11%"></span><span class="skel__b" style="width:6%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:21%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:11%"></span><span class="skel__b" style="width:6%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:21%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:11%"></span><span class="skel__b" style="width:6%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:21%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:11%"></span><span class="skel__b" style="width:6%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:21%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div></div>
+    <div class="note note--err when-error">
+      <h3>The run history did not load</h3>
+      <p>The scheduler API answered 503 at 08:42. Run history is the only source for this panel, so nothing here is current until it answers.</p>
+      <button type="button" class="btn btn--quiet" data-retry="1">Try the scheduler again</button>
+    </div>
+    <div class="note when-empty">
+      <h3>No pipeline is connected yet</h3>
+      <p>Sluice reads run history from your scheduler. Point it at one and this window fills in as runs land. Nothing is deleted or triggered by connecting.</p>
+      <button type="button" class="btn btn--primary" data-demo-action="Connecting a scheduler">Connect a scheduler</button>
+      <p class="inline-note" data-demo-note hidden></p>
+    </div>
+  </section>
+
+  <!-- freshness ----------------------------------------------------- -->
+  <section class="panel rise rise-4" id="fresh" aria-labelledby="fresh-h">
+    <div class="panel__head">
+      <div class="panel__id">
+        <h2 id="fresh-h">Table freshness<span class="panel__count when-ready" id="fresh-count">28 of 28</span></h2>
+        <p class="panel__sub when-ready"><span class="wide-only">The bar is time since the last load and the upright mark is the deadline, both on the window above. </span>Select a table for its partitions and its writer.</p>
+      </div>
+      <div class="panel__tools">
+        <div class="chips" role="group" aria-label="Filter tables by freshness">
+          <button type="button" class="fchip" data-fs="all" aria-pressed="true">All</button>
+          <button type="button" class="fchip" data-fs="breach" aria-pressed="false">Past SLA <span class="when-ready">(4)</span></button>
+          <button type="button" class="fchip" data-fs="risk" aria-pressed="false">At risk <span class="when-ready">(4)</span></button>
+          <button type="button" class="fchip" data-fs="due" aria-pressed="false">Due later <span class="when-ready">(3)</span></button>
+          <button type="button" class="fchip" data-fs="landed" aria-pressed="false">Landed <span class="when-ready">(17)</span></button>
+        </div>
+        <label class="field"><span class="sr">Domain</span>
+          <select id="domsel" aria-label="Filter tables by domain">
+            <option value="all">Every domain</option>
+            <option value="Commerce">Commerce</option><option value="Core">Core</option><option value="Finance">Finance</option><option value="Growth">Growth</option><option value="ML">ML</option><option value="Payments">Payments</option><option value="People">People</option><option value="Platform">Platform</option><option value="Revenue Ops">Revenue Ops</option>
+          </select>
+        </label>
+        <div class="srch"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6.2" cy="6.2" r="3.8"/><path d="M9.2 9.2 12 12"/></svg><label class="sr" for="freshq">Search tables</label><input type="search" id="freshq" placeholder="schema.table"></div>
+      </div>
+    </div>
+    <div class="when-ready">
+      <div class="tbl-scroll">
+        <table class="fresh">
+          <caption class="sr">Freshness of 28 tracked tables against their SLA deadlines</caption>
+          <thead><tr>
+            <th class="c-name" scope="col">Table</th>
+            <th class="c-team" scope="col">Domain</th>
+            <th class="c-num c-loaded" scope="col">Last load</th>
+            <th class="c-num" scope="col">Age</th>
+            <th class="c-num" scope="col">Due</th>
+            <th class="c-bar" scope="col">Age on the window</th>
+            <th class="c-rows" scope="col">Rows</th>
+            <th class="c-state" scope="col">State</th>
+          </tr></thead>
+          <tbody id="fresh-body"><tr class="row" data-table="t_raw_stripe_charges" data-fresh="breach" data-run="run_8841" data-q="raw_prod.stripe_charges payments">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_raw_stripe_charges" title="raw_prod.stripe_charges"><span class="rowbtn__name mono">stripe_charges</span><span class="rowbtn__sub mono"><span>raw_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Payments</span></td>
+  <td class="c-num c-loaded"><span class="t-old">2026-10-31</span></td>
+  <td class="c-num">1d 3h</td>
+  <td class="c-num">05:30</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--wait bar--clip" style="left:0;width:12.5%" aria-hidden="true"></span><span class="bar bar--breach" style="left:12.5%;width:80%" aria-hidden="true"></span><span class="deadline" style="left:12.5%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">1,284,391</td>
+  <td class="c-state"><span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>past SLA</span></span></td>
+</tr>
+<tr class="detail" id="df_t_raw_stripe_charges" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">raw_prod.stripe_charges</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-10-31 05:12</dd></div>
+        <div><dt>Age</dt><dd class="mono">1d 3h</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">05:30 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">1,284,391</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">41</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ingest.stripe_charges</span>, which failed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_fct_subscription_revenue_daily" data-fresh="breach" data-run="run_8846" data-q="analytics_prod.fct_subscription_revenue_daily finance">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_fct_subscription_revenue_daily" title="analytics_prod.fct_subscription_revenue_daily"><span class="rowbtn__name mono">fct_subscription_revenue_daily</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Finance</span></td>
+  <td class="c-num c-loaded"><span class="t-old">2026-10-31</span></td>
+  <td class="c-num">1d 3h</td>
+  <td class="c-num">06:30</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--wait bar--clip" style="left:0;width:37.5%" aria-hidden="true"></span><span class="bar bar--breach" style="left:37.5%;width:55%" aria-hidden="true"></span><span class="deadline" style="left:37.5%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">9,482,113</td>
+  <td class="c-state"><span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>past SLA</span></span></td>
+</tr>
+<tr class="detail" id="df_t_fct_subscription_revenue_daily" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.fct_subscription_revenue_daily</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-10-31 05:42</dd></div>
+        <div><dt>Age</dt><dd class="mono">1d 3h</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">06:30 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">9,482,113</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">731</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">dbt.fct_subscription_revenue_daily</span>, which failed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_mart_finance_revenue_eu" data-fresh="breach" data-run="run_8847" data-q="analytics_prod.mart_finance_revenue_eu finance">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_mart_finance_revenue_eu" title="analytics_prod.mart_finance_revenue_eu"><span class="rowbtn__name mono">mart_finance_revenue_eu</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Finance</span></td>
+  <td class="c-num c-loaded"><span class="t-old">2026-10-31</span></td>
+  <td class="c-num">1d 2h</td>
+  <td class="c-num">07:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--wait bar--clip" style="left:0;width:50%" aria-hidden="true"></span><span class="bar bar--breach" style="left:50%;width:42.5%" aria-hidden="true"></span><span class="deadline" style="left:50%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">412,889</td>
+  <td class="c-state"><span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>past SLA</span></span></td>
+</tr>
+<tr class="detail" id="df_t_mart_finance_revenue_eu" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.mart_finance_revenue_eu</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-10-31 06:00</dd></div>
+        <div><dt>Age</dt><dd class="mono">1d 2h</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">07:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">412,889</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">24</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">dbt.mart_finance_revenue_eu</span>, which queued.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_raw_salesforce_opportunity" data-fresh="breach" data-run="run_8856" data-q="raw_prod.salesforce_opportunity revenue ops">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_raw_salesforce_opportunity" title="raw_prod.salesforce_opportunity"><span class="rowbtn__name mono">salesforce_opportunity</span><span class="rowbtn__sub mono"><span>raw_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Revenue Ops</span></td>
+  <td class="c-num c-loaded"><span class="t-old">2026-10-31</span></td>
+  <td class="c-num">1d 2h</td>
+  <td class="c-num">08:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--wait bar--clip" style="left:0;width:75%" aria-hidden="true"></span><span class="bar bar--breach" style="left:75%;width:17.5%" aria-hidden="true"></span><span class="deadline" style="left:75%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">60,418</td>
+  <td class="c-state"><span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>past SLA</span></span></td>
+</tr>
+<tr class="detail" id="df_t_raw_salesforce_opportunity" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">raw_prod.salesforce_opportunity</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-10-31 06:19</dd></div>
+        <div><dt>Age</dt><dd class="mono">1d 2h</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">08:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">60,418</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">12</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ingest.salesforce_opportunity</span>, which retrying.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_stg_clickstream_sessions" data-fresh="risk" data-run="run_8851" data-q="analytics_prod.stg_clickstream_sessions growth">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_stg_clickstream_sessions" title="analytics_prod.stg_clickstream_sessions"><span class="rowbtn__name mono">stg_clickstream_sessions</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Growth</span></td>
+  <td class="c-num c-loaded"><span class="t-old">2026-10-31</span></td>
+  <td class="c-num">1d 3h</td>
+  <td class="c-num">08:45</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--wait bar--clip" style="left:0;width:92.5%" aria-hidden="true"></span><span class="deadline" style="left:93.75%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">41,902,776</td>
+  <td class="c-state"><span class="chip chip--risk"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2v3M7 9.3v.5"/></svg><span>at risk</span></span></td>
+</tr>
+<tr class="detail" id="df_t_stg_clickstream_sessions" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.stg_clickstream_sessions</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-10-31 05:00</dd></div>
+        <div><dt>Age</dt><dd class="mono">1d 3h</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">08:45 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">41,902,776</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">168</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">dbt.stg_clickstream_sessions</span>, which queued.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_fct_product_adoption_weekly" data-fresh="risk" data-run="run_8852" data-q="analytics_prod.fct_product_adoption_weekly growth">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_fct_product_adoption_weekly" title="analytics_prod.fct_product_adoption_weekly"><span class="rowbtn__name mono">fct_product_adoption_weekly</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Growth</span></td>
+  <td class="c-num c-loaded"><span class="t-old">2026-10-30</span></td>
+  <td class="c-num">2d 1h</td>
+  <td class="c-num">09:15</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--wait bar--clip" style="left:0;width:92.5%" aria-hidden="true"></span><span class="deadline" style="left:100%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">884,210</td>
+  <td class="c-state"><span class="chip chip--risk"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2v3M7 9.3v.5"/></svg><span>at risk</span></span></td>
+</tr>
+<tr class="detail" id="df_t_fct_product_adoption_weekly" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.fct_product_adoption_weekly</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-10-30 07:00</dd></div>
+        <div><dt>Age</dt><dd class="mono">2d 1h</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">09:15 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">884,210</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">104</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">dbt.fct_product_adoption_weekly</span>, which queued.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_dim_salesforce_account" data-fresh="risk" data-run="run_8857" data-q="analytics_prod.dim_salesforce_account revenue ops">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_dim_salesforce_account" title="analytics_prod.dim_salesforce_account"><span class="rowbtn__name mono">dim_salesforce_account</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Revenue Ops</span></td>
+  <td class="c-num c-loaded"><span class="t-old">2026-10-31</span></td>
+  <td class="c-num">1d 2h</td>
+  <td class="c-num">09:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--wait bar--clip" style="left:0;width:92.5%" aria-hidden="true"></span><span class="deadline" style="left:100%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">28,714</td>
+  <td class="c-state"><span class="chip chip--risk"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2v3M7 9.3v.5"/></svg><span>at risk</span></span></td>
+</tr>
+<tr class="detail" id="df_t_dim_salesforce_account" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.dim_salesforce_account</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-10-31 06:30</dd></div>
+        <div><dt>Age</dt><dd class="mono">1d 2h</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">09:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">28,714</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">1</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">reverse_etl.salesforce_accounts</span>, which queued.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_propensity_scores_eu_west_1" data-fresh="risk" data-run="run_8861" data-q="ml_prod.propensity_scores_eu_west_1 ml">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_propensity_scores_eu_west_1" title="ml_prod.propensity_scores_eu_west_1"><span class="rowbtn__name mono">propensity_scores_eu_west_1</span><span class="rowbtn__sub mono"><span>ml_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">ML</span></td>
+  <td class="c-num c-loaded"><span class="t-old">2026-10-31</span></td>
+  <td class="c-num">1d 8h</td>
+  <td class="c-num">09:30</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--wait bar--clip" style="left:0;width:92.5%" aria-hidden="true"></span><span class="deadline" style="left:100%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">310,882</td>
+  <td class="c-state"><span class="chip chip--risk"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2v3M7 9.3v.5"/></svg><span>at risk</span></span></td>
+</tr>
+<tr class="detail" id="df_t_propensity_scores_eu_west_1" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">ml_prod.propensity_scores_eu_west_1</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-10-31 00:10</dd></div>
+        <div><dt>Age</dt><dd class="mono">1d 8h</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">09:30 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">310,882</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">1</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ml.retrain_propensity_eu_west_1</span>, which running.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_raw_kafka_clickstream_events" data-fresh="landed" data-run="run_8850" data-q="raw_prod.kafka_clickstream_events platform">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_raw_kafka_clickstream_events" title="raw_prod.kafka_clickstream_events"><span class="rowbtn__name mono">kafka_clickstream_events</span><span class="rowbtn__sub mono"><span>raw_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Platform</span></td>
+  <td class="c-num c-loaded">07:48</td>
+  <td class="c-num">54m</td>
+  <td class="c-num">09:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:70%;width:22.5%" aria-hidden="true"></span><span class="deadline" style="left:100%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">51,200,391</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_raw_kafka_clickstream_events" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">raw_prod.kafka_clickstream_events</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 07:48</dd></div>
+        <div><dt>Age</dt><dd class="mono">54m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">09:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">51,200,391</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">288</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ingest.kafka_clickstream_compact</span>, which late.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_raw_zuora_invoices" data-fresh="landed" data-run="run_8843" data-q="raw_prod.zuora_invoices finance">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_raw_zuora_invoices" title="raw_prod.zuora_invoices"><span class="rowbtn__name mono">zuora_invoices</span><span class="rowbtn__sub mono"><span>raw_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Finance</span></td>
+  <td class="c-num c-loaded">05:41</td>
+  <td class="c-num">3h 01m</td>
+  <td class="c-num">06:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:17.083%;width:75.417%" aria-hidden="true"></span><span class="deadline" style="left:25%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">48,221</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_raw_zuora_invoices" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">raw_prod.zuora_invoices</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 05:41</dd></div>
+        <div><dt>Age</dt><dd class="mono">3h 01m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">06:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">48,221</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">8</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ingest.zuora_invoices</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_raw_netsuite_gl" data-fresh="landed" data-run="run_8848" data-q="raw_prod.netsuite_gl finance">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_raw_netsuite_gl" title="raw_prod.netsuite_gl"><span class="rowbtn__name mono">netsuite_gl</span><span class="rowbtn__sub mono"><span>raw_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Finance</span></td>
+  <td class="c-num c-loaded">05:34</td>
+  <td class="c-num">3h 08m</td>
+  <td class="c-num">06:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:14.167%;width:78.333%" aria-hidden="true"></span><span class="deadline" style="left:25%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">71,204</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_raw_netsuite_gl" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">raw_prod.netsuite_gl</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 05:34</dd></div>
+        <div><dt>Age</dt><dd class="mono">3h 08m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">06:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">71,204</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">12</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ingest.netsuite_gl</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_fct_gl_journal" data-fresh="landed" data-run="run_8849" data-q="analytics_prod.fct_gl_journal finance">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_fct_gl_journal" title="analytics_prod.fct_gl_journal"><span class="rowbtn__name mono">fct_gl_journal</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Finance</span></td>
+  <td class="c-num c-loaded">05:49</td>
+  <td class="c-num">2h 53m</td>
+  <td class="c-num">06:30</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:20.417%;width:72.083%" aria-hidden="true"></span><span class="deadline" style="left:37.5%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">71,204</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_fct_gl_journal" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.fct_gl_journal</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 05:49</dd></div>
+        <div><dt>Age</dt><dd class="mono">2h 53m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">06:30 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">71,204</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">365</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">dbt.fct_gl_journal</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_stg_subscription_events" data-fresh="landed" data-run="run_8844" data-q="analytics_prod.stg_subscription_events core">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_stg_subscription_events" title="analytics_prod.stg_subscription_events"><span class="rowbtn__name mono">stg_subscription_events</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Core</span></td>
+  <td class="c-num c-loaded">05:58</td>
+  <td class="c-num">2h 44m</td>
+  <td class="c-num">06:40</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:24.167%;width:68.333%" aria-hidden="true"></span><span class="deadline" style="left:41.667%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">902,144</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span><span class="chip chip--risk chip--second"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2v3M7 9.3v.5"/></svg><span>stale input</span></span></td>
+</tr>
+<tr class="detail" id="df_t_stg_subscription_events" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.stg_subscription_events</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 05:58</dd></div>
+        <div><dt>Age</dt><dd class="mono">2h 44m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">06:40 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">902,144</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">90</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Landed on yesterday's raw_prod.stripe_charges partition.</span></p>
+      <p class="detail__writes">Written by <span class="mono">dbt.stg_subscription_events</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_dim_customer" data-fresh="landed" data-run="run_8845" data-q="analytics_prod.dim_customer core">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_dim_customer" title="analytics_prod.dim_customer"><span class="rowbtn__name mono">dim_customer</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Core</span></td>
+  <td class="c-num c-loaded">06:12</td>
+  <td class="c-num">2h 30m</td>
+  <td class="c-num">07:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:30%;width:62.5%" aria-hidden="true"></span><span class="deadline" style="left:50%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">310,882</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_dim_customer" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.dim_customer</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 06:12</dd></div>
+        <div><dt>Age</dt><dd class="mono">2h 30m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">07:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">310,882</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">1</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">dbt.dim_customer</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_raw_appsflyer_installs" data-fresh="landed" data-run="run_8853" data-q="raw_prod.appsflyer_installs growth">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_raw_appsflyer_installs" title="raw_prod.appsflyer_installs"><span class="rowbtn__name mono">appsflyer_installs</span><span class="rowbtn__sub mono"><span>raw_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Growth</span></td>
+  <td class="c-num c-loaded">05:27</td>
+  <td class="c-num">3h 15m</td>
+  <td class="c-num">06:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:11.25%;width:81.25%" aria-hidden="true"></span><span class="deadline" style="left:25%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">12,904</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_raw_appsflyer_installs" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">raw_prod.appsflyer_installs</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 05:27</dd></div>
+        <div><dt>Age</dt><dd class="mono">3h 15m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">06:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">12,904</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">24</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ingest.appsflyer_installs</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_raw_braze_campaign_sends" data-fresh="landed" data-run="run_8854" data-q="raw_prod.braze_campaign_sends growth">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_raw_braze_campaign_sends" title="raw_prod.braze_campaign_sends"><span class="rowbtn__name mono">braze_campaign_sends</span><span class="rowbtn__sub mono"><span>raw_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Growth</span></td>
+  <td class="c-num c-loaded">05:30</td>
+  <td class="c-num">3h 12m</td>
+  <td class="c-num">06:15</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:12.5%;width:80%" aria-hidden="true"></span><span class="deadline" style="left:31.25%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">88,431</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_raw_braze_campaign_sends" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">raw_prod.braze_campaign_sends</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 05:30</dd></div>
+        <div><dt>Age</dt><dd class="mono">3h 12m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">06:15 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">88,431</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">24</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ingest.braze_campaign_sends</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_fct_marketing_attribution" data-fresh="landed" data-run="run_8855" data-q="analytics_prod.fct_marketing_attribution growth">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_fct_marketing_attribution" title="analytics_prod.fct_marketing_attribution"><span class="rowbtn__name mono">fct_marketing_attribution</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Growth</span></td>
+  <td class="c-num c-loaded">07:48</td>
+  <td class="c-num">54m</td>
+  <td class="c-num">08:30</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:70%;width:22.5%" aria-hidden="true"></span><span class="deadline" style="left:87.5%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">2,104,887</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_fct_marketing_attribution" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.fct_marketing_attribution</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 07:48</dd></div>
+        <div><dt>Age</dt><dd class="mono">54m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">08:30 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">2,104,887</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">365</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">dbt.fct_marketing_attribution</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_raw_shopify_orders_apac" data-fresh="landed" data-run="run_8858" data-q="raw_prod.shopify_orders_apac commerce">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_raw_shopify_orders_apac" title="raw_prod.shopify_orders_apac"><span class="rowbtn__name mono">shopify_orders_apac</span><span class="rowbtn__sub mono"><span>raw_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Commerce</span></td>
+  <td class="c-num c-loaded">05:18</td>
+  <td class="c-num">3h 24m</td>
+  <td class="c-num">05:45</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:7.5%;width:85%" aria-hidden="true"></span><span class="deadline" style="left:18.75%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">23,119</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_raw_shopify_orders_apac" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">raw_prod.shopify_orders_apac</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 05:18</dd></div>
+        <div><dt>Age</dt><dd class="mono">3h 24m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">05:45 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">23,119</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">24</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ingest.shopify_orders_apac</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_fct_order_lines_eu_west_1" data-fresh="landed" data-run="run_8859" data-q="analytics_prod.fct_order_lines_eu_west_1__backfill_v3 commerce">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_fct_order_lines_eu_west_1" title="analytics_prod.fct_order_lines_eu_west_1__backfill_v3"><span class="rowbtn__name mono">fct_order_lines_eu_west_1__backfill_v3</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Commerce</span></td>
+  <td class="c-num c-loaded">08:39</td>
+  <td class="c-num">3m</td>
+  <td class="c-num">08:45</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:91.25%;width:1.25%" aria-hidden="true"></span><span class="deadline" style="left:93.75%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">184,203,991</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_fct_order_lines_eu_west_1" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.fct_order_lines_eu_west_1__backfill_v3</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 08:39</dd></div>
+        <div><dt>Age</dt><dd class="mono">3m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">08:45 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">184,203,991</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">1,096</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">dbt.fct_order_lines_eu_west_1__backfill_v3_20261101</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_feature_store_churn_v4" data-fresh="landed" data-run="run_8860" data-q="ml_prod.feature_store_churn_v4 ml">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_feature_store_churn_v4" title="ml_prod.feature_store_churn_v4"><span class="rowbtn__name mono">feature_store_churn_v4</span><span class="rowbtn__sub mono"><span>ml_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">ML</span></td>
+  <td class="c-num c-loaded">08:30</td>
+  <td class="c-num">12m</td>
+  <td class="c-num">09:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:87.5%;width:5%" aria-hidden="true"></span><span class="deadline" style="left:100%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">55,210</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_feature_store_churn_v4" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">ml_prod.feature_store_churn_v4</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 08:30</dd></div>
+        <div><dt>Age</dt><dd class="mono">12m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">09:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">55,210</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">1</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ml.feature_store_churn_v4</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_raw_workday_headcount" data-fresh="landed" data-run="run_8864" data-q="raw_prod.workday_headcount people">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_raw_workday_headcount" title="raw_prod.workday_headcount"><span class="rowbtn__name mono">workday_headcount</span><span class="rowbtn__sub mono"><span>raw_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">People</span></td>
+  <td class="c-num c-loaded">05:07</td>
+  <td class="c-num">3h 35m</td>
+  <td class="c-num">05:30</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:2.917%;width:89.583%" aria-hidden="true"></span><span class="deadline" style="left:12.5%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">1,842</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_raw_workday_headcount" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">raw_prod.workday_headcount</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 05:07</dd></div>
+        <div><dt>Age</dt><dd class="mono">3h 35m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">05:30 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">1,842</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">1</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ingest.workday_headcount</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_dim_employee" data-fresh="landed" data-run="run_8865" data-q="analytics_prod.dim_employee people">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_dim_employee" title="analytics_prod.dim_employee"><span class="rowbtn__name mono">dim_employee</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">People</span></td>
+  <td class="c-num c-loaded">05:14</td>
+  <td class="c-num">3h 28m</td>
+  <td class="c-num">05:45</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:5.833%;width:86.667%" aria-hidden="true"></span><span class="deadline" style="left:18.75%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">1,842</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_dim_employee" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.dim_employee</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 05:14</dd></div>
+        <div><dt>Age</dt><dd class="mono">3h 28m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">05:45 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">1,842</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">1</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">dbt.dim_employee</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_fct_usage_metered_hourly" data-fresh="landed" data-run="run_8867" data-q="analytics_prod.fct_usage_metered_hourly core">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_fct_usage_metered_hourly" title="analytics_prod.fct_usage_metered_hourly"><span class="rowbtn__name mono">fct_usage_metered_hourly</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Core</span></td>
+  <td class="c-num c-loaded">08:37</td>
+  <td class="c-num">5m</td>
+  <td class="c-num">09:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:90.417%;width:2.083%" aria-hidden="true"></span><span class="deadline" style="left:100%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">7,410,233</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_fct_usage_metered_hourly" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.fct_usage_metered_hourly</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 08:37</dd></div>
+        <div><dt>Age</dt><dd class="mono">5m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">09:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">7,410,233</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">744</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">dbt.fct_usage_metered_hourly</span>, which landed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_expectation_results" data-fresh="landed" data-run="run_8862" data-q="quality_prod.expectation_results platform">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_expectation_results" title="quality_prod.expectation_results"><span class="rowbtn__name mono">expectation_results</span><span class="rowbtn__sub mono"><span>quality_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Platform</span></td>
+  <td class="c-num c-loaded">08:21</td>
+  <td class="c-num">21m</td>
+  <td class="c-num">09:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:83.75%;width:8.75%" aria-hidden="true"></span><span class="deadline" style="left:100%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">212</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_expectation_results" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">quality_prod.expectation_results</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 08:21</dd></div>
+        <div><dt>Age</dt><dd class="mono">21m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">09:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">212</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">1</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">quality.great_expectations_suite</span>, which failed.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_raw_bigquery_cost_export" data-fresh="due" data-run="run_8866" data-q="raw_prod.bigquery_cost_export platform">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_raw_bigquery_cost_export" title="raw_prod.bigquery_cost_export"><span class="rowbtn__name mono">bigquery_cost_export</span><span class="rowbtn__sub mono"><span>raw_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Platform</span></td>
+  <td class="c-num c-loaded"><span class="t-old">2026-10-31</span></td>
+  <td class="c-num">1d 3h</td>
+  <td class="c-num">10:30</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--wait bar--clip" style="left:0;width:92.5%" aria-hidden="true"></span><span class="deadline" style="left:100%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">904,112</td>
+  <td class="c-state"><span class="chip chip--due"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8" stroke-dasharray="2.2 2"/></svg><span>due</span></span></td>
+</tr>
+<tr class="detail" id="df_t_raw_bigquery_cost_export" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">raw_prod.bigquery_cost_export</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-10-31 05:01</dd></div>
+        <div><dt>Age</dt><dd class="mono">1d 3h</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">10:30 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">904,112</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">31</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ingest.bigquery_cost_export</span>, which cancelled.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_dim_date" data-fresh="due" data-run="" data-q="analytics_prod.dim_date core">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_dim_date" title="analytics_prod.dim_date"><span class="rowbtn__name mono">dim_date</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Core</span></td>
+  <td class="c-num c-loaded"><span class="t-old">2026-10-29</span></td>
+  <td class="c-num">3d 8h</td>
+  <td class="c-num">23:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--wait bar--clip" style="left:0;width:92.5%" aria-hidden="true"></span><span class="deadline" style="left:100%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">36,524</td>
+  <td class="c-state"><span class="chip chip--due"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8" stroke-dasharray="2.2 2"/></svg><span>due</span></span></td>
+</tr>
+<tr class="detail" id="df_t_dim_date" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.dim_date</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-10-29 00:00</dd></div>
+        <div><dt>Age</dt><dd class="mono">3d 8h</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">23:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">36,524</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">1</dd></div>
+      </dl>
+      
+      <p class="detail__writes">No pipeline in this window writes this table.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_fct_sub_rev_backfill" data-fresh="due" data-run="" data-q="analytics_prod.fct_subscription_revenue_daily_eu_west_1__backfill_v3 finance">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_fct_sub_rev_backfill" title="analytics_prod.fct_subscription_revenue_daily_eu_west_1__backfill_v3"><span class="rowbtn__name mono">fct_subscription_revenue_daily_eu_west_1__backfill_v3</span><span class="rowbtn__sub mono"><span>analytics_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Finance</span></td>
+  <td class="c-num c-loaded"><span class="t-old">2026-10-30</span></td>
+  <td class="c-num">2d 1h</td>
+  <td class="c-num">17:00</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--wait bar--clip" style="left:0;width:92.5%" aria-hidden="true"></span><span class="deadline" style="left:100%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">0</td>
+  <td class="c-state"><span class="chip chip--due"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8" stroke-dasharray="2.2 2"/></svg><span>due</span></span></td>
+</tr>
+<tr class="detail" id="df_t_fct_sub_rev_backfill" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">analytics_prod.fct_subscription_revenue_daily_eu_west_1__backfill_v3</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-10-30 07:00</dd></div>
+        <div><dt>Age</dt><dd class="mono">2d 1h</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">17:00 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">0</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">0</dd></div>
+      </dl>
+      <p class="detail__why"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Created 2026-10-30 by a backfill that has not written a partition yet. The last-load time is the create time.</span></p>
+      <p class="detail__writes">No pipeline in this window writes this table.</p>
+    </div>
+  </td>
+</tr><tr class="row" data-table="t_raw_stripe_disputes" data-fresh="landed" data-run="run_8842" data-q="raw_prod.stripe_disputes payments">
+  <td class="c-name"><button type="button" class="rowbtn" aria-expanded="false" aria-controls="df_t_raw_stripe_disputes" title="raw_prod.stripe_disputes"><span class="rowbtn__name mono">stripe_disputes</span><span class="rowbtn__sub mono"><span>raw_prod</span></span></button></td>
+  <td class="c-team"><span class="t-team">Payments</span></td>
+  <td class="c-num c-loaded">05:12</td>
+  <td class="c-num">3h 30m</td>
+  <td class="c-num">05:45</td>
+  <td class="c-bar"><span class="track"><span class="bar bar--ok" style="left:5%;width:87.5%" aria-hidden="true"></span><span class="deadline" style="left:18.75%" aria-hidden="true"></span></span></td>
+  <td class="c-num c-rows">1,182</td>
+  <td class="c-state"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed</span></span></td>
+</tr>
+<tr class="detail" id="df_t_raw_stripe_disputes" hidden>
+  <td colspan="8">
+    <div class="detail__in">
+      <dl class="kv">
+        <div><dt>Table</dt><dd class="mono wrapany">raw_prod.stripe_disputes</dd></div>
+        <div><dt>Last load</dt><dd class="mono">2026-11-01 05:12</dd></div>
+        <div><dt>Age</dt><dd class="mono">3h 30m</dd></div>
+        <div><dt>SLA deadline</dt><dd class="mono">05:45 today</dd></div>
+        <div><dt>Rows</dt><dd class="mono">1,182</dd></div>
+        <div><dt>Partitions</dt><dd class="mono">24</dd></div>
+      </dl>
+      
+      <p class="detail__writes">Written by <span class="mono">ingest.stripe_disputes</span>, which landed.</p>
+    </div>
+  </td>
+</tr></tbody>
+        </table>
+      </div>
+      <div class="note when-filtered" id="fresh-none" hidden>
+        <h3>No table matches these filters</h3>
+        <p id="fresh-none-why"></p>
+        <button type="button" class="btn btn--quiet" data-clear="fresh">Clear the table filters</button>
+      </div>
+    </div>
+    <div class="skel when-loading" aria-hidden="true"><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:19%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:19%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:19%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:19%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:19%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:19%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div><div class="skel__r"><span class="skel__b" style="width:22%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:7%"></span><span class="skel__b" style="width:19%"></span><span class="skel__b" style="width:9%"></span><span class="skel__b" style="width:11%"></span></div></div>
+    <div class="note note--err when-error">
+      <h3>Freshness did not load</h3>
+      <p>The warehouse metadata query timed out after 30s. Ages shown before the timeout were read at 08:41 and are not being updated.</p>
+      <button type="button" class="btn btn--quiet" data-retry="1">Run the query again</button>
+    </div>
+    <div class="note when-empty">
+      <h3>No table is tracked yet</h3>
+      <p>Freshness needs at least one table and a deadline. Add a table and Sluice measures its age against that deadline from the next load.</p>
+      <button type="button" class="btn btn--quiet" data-demo-action="Adding a tracked table">Track a table</button>
+      <p class="inline-note" data-demo-note hidden></p>
+    </div>
+  </section>
+
+  <!-- lineage ------------------------------------------------------- -->
+  <section class="panel" id="lineage" aria-labelledby="lin-h">
+    <div class="panel__head">
+      <div class="panel__id">
+        <h2 id="lin-h">Lineage<span class="panel__count when-ready">10 assets on this path</span></h2>
+        <p class="panel__sub when-ready" id="lin-sub">What analytics_prod.mart_finance_revenue_eu is built from, and what is wrong downstream of INC-2291.</p>
+      </div>
+    </div>
+    <div class="when-ready">
+      <div class="lin-wrap"><svg class="lin" viewBox="0 0 1180 336" width="1180" height="336" role="presentation" aria-hidden="true"><path class="edge e--hot" d="M186 45 C198 45 198 45 210 45"/><path class="edge" d="M186 127 C198 127 198 45 210 45"/><path class="edge" d="M186 291 C198 291 198 291 210 291"/><path class="edge" d="M382 45 C394 45 394 127 406 127"/><path class="edge e--hot" d="M382 45 C492 45 492 45 602 45"/><path class="edge" d="M578 127 C590 127 590 45 602 45"/><path class="edge e--hot" d="M774 45 C786 45 786 127 798 127"/><path class="edge" d="M382 291 C590 291 590 127 798 127"/><path class="edge e--hot" d="M970 127 C982 127 982 45 994 45"/><path class="edge e--hot" d="M970 127 C982 127 982 209 994 209"/><g class="node node--breach" data-table="t_raw_stripe_charges" data-run="run_8841" transform="translate(14 14)">
+  <title>raw_prod.stripe_charges — no load today</title>
+  <rect class="node__bg" x="0" y="0" width="172" height="62" rx="8"/>
+  <rect class="node__edge" x="0" y="0" width="3" height="62" rx="1.5"/>
+  <text class="node__schema" x="12" y="19">raw_prod</text>
+  <text class="node__name" x="12" y="37">stripe_charges</text>
+  <text class="node__word" x="12" y="54">no load today</text>
+</g><g class="node node--ok" data-table="t_raw_zuora_invoices" data-run="run_8843" transform="translate(14 96)">
+  <title>raw_prod.zuora_invoices — landed 05:41</title>
+  <rect class="node__bg" x="0" y="0" width="172" height="62" rx="8"/>
+  <rect class="node__edge" x="0" y="0" width="3" height="62" rx="1.5"/>
+  <text class="node__schema" x="12" y="19">raw_prod</text>
+  <text class="node__name" x="12" y="37">zuora_invoices</text>
+  <text class="node__word" x="12" y="54">landed 05:41</text>
+</g><g class="node node--ok" data-table="t_raw_netsuite_gl" data-run="run_8848" transform="translate(14 260)">
+  <title>raw_prod.netsuite_gl — landed 05:34</title>
+  <rect class="node__bg" x="0" y="0" width="172" height="62" rx="8"/>
+  <rect class="node__edge" x="0" y="0" width="3" height="62" rx="1.5"/>
+  <text class="node__schema" x="12" y="19">raw_prod</text>
+  <text class="node__name" x="12" y="37">netsuite_gl</text>
+  <text class="node__word" x="12" y="54">landed 05:34</text>
+</g><g class="node node--risk" data-table="t_stg_subscription_events" data-run="run_8844" transform="translate(210 14)">
+  <title>analytics_prod.stg_subscription_events — landed, stale input</title>
+  <rect class="node__bg" x="0" y="0" width="172" height="62" rx="8"/>
+  <rect class="node__edge" x="0" y="0" width="3" height="62" rx="1.5"/>
+  <text class="node__schema" x="12" y="19">analytics_prod</text>
+  <text class="node__name" x="12" y="37">stg_subscription_e…</text>
+  <text class="node__word" x="12" y="54">landed, stale input</text>
+</g><g class="node node--ok" data-table="t_fct_gl_journal" data-run="run_8849" transform="translate(210 260)">
+  <title>analytics_prod.fct_gl_journal — landed 05:49</title>
+  <rect class="node__bg" x="0" y="0" width="172" height="62" rx="8"/>
+  <rect class="node__edge" x="0" y="0" width="3" height="62" rx="1.5"/>
+  <text class="node__schema" x="12" y="19">analytics_prod</text>
+  <text class="node__name" x="12" y="37">fct_gl_journal</text>
+  <text class="node__word" x="12" y="54">landed 05:49</text>
+</g><g class="node node--ok" data-table="t_dim_customer" data-run="run_8845" transform="translate(406 96)">
+  <title>analytics_prod.dim_customer — landed 06:12</title>
+  <rect class="node__bg" x="0" y="0" width="172" height="62" rx="8"/>
+  <rect class="node__edge" x="0" y="0" width="3" height="62" rx="1.5"/>
+  <text class="node__schema" x="12" y="19">analytics_prod</text>
+  <text class="node__name" x="12" y="37">dim_customer</text>
+  <text class="node__word" x="12" y="54">landed 06:12</text>
+</g><g class="node node--breach" data-table="t_fct_subscription_revenue_daily" data-run="run_8846" transform="translate(602 14)">
+  <title>analytics_prod.fct_subscription_revenue_daily — write failed</title>
+  <rect class="node__bg" x="0" y="0" width="172" height="62" rx="8"/>
+  <rect class="node__edge" x="0" y="0" width="3" height="62" rx="1.5"/>
+  <text class="node__schema" x="12" y="19">analytics_prod</text>
+  <text class="node__name" x="12" y="37">fct_subscription_r…</text>
+  <text class="node__word" x="12" y="54">write failed</text>
+</g><g class="node node--breach" data-table="t_mart_finance_revenue_eu" data-run="run_8847" transform="translate(798 96)">
+  <title>analytics_prod.mart_finance_revenue_eu — blocked</title>
+  <rect class="node__bg" x="0" y="0" width="172" height="62" rx="8"/>
+  <rect class="node__edge" x="0" y="0" width="3" height="62" rx="1.5"/>
+  <text class="node__schema" x="12" y="19">analytics_prod</text>
+  <text class="node__name" x="12" y="37">mart_finance_reven…</text>
+  <text class="node__word" x="12" y="54">blocked</text>
+</g><g class="node node--risk" data-table="" data-run="" transform="translate(994 14)">
+  <title>Looker: Revenue EU — serving 31 Oct</title>
+  <rect class="node__bg" x="0" y="0" width="172" height="62" rx="8"/>
+  <rect class="node__edge" x="0" y="0" width="3" height="62" rx="1.5"/>
+  <text class="node__schema" x="12" y="19">consumer</text>
+  <text class="node__name" x="12" y="37">Looker: Revenue EU</text>
+  <text class="node__word" x="12" y="54">serving 31 Oct</text>
+</g><g class="node node--breach" data-table="t_dim_salesforce_account" data-run="run_8857" transform="translate(994 178)">
+  <title>Salesforce accounts — blocked</title>
+  <rect class="node__bg" x="0" y="0" width="172" height="62" rx="8"/>
+  <rect class="node__edge" x="0" y="0" width="3" height="62" rx="1.5"/>
+  <text class="node__schema" x="12" y="19">reverse_etl</text>
+  <text class="node__name" x="12" y="37">Salesforce accounts</text>
+  <text class="node__word" x="12" y="54">blocked</text>
+</g></svg></div>
+      <ol class="tree"><li class="tree__step"><p class="tree__lvl">Level 1</p><ul class="tree__nodes"><li class="tree__node" data-table="t_raw_stripe_charges" data-run="run_8841"><span class="mono wrapany">raw_prod.stripe_charges</span> <span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>no load today</span></span></li><li class="tree__node" data-table="t_raw_zuora_invoices" data-run="run_8843"><span class="mono wrapany">raw_prod.zuora_invoices</span> <span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed 05:41</span></span></li><li class="tree__node" data-table="t_raw_netsuite_gl" data-run="run_8848"><span class="mono wrapany">raw_prod.netsuite_gl</span> <span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed 05:34</span></span></li></ul></li><li class="tree__step"><p class="tree__lvl">Level 2</p><ul class="tree__nodes"><li class="tree__node" data-table="t_stg_subscription_events" data-run="run_8844"><span class="mono wrapany">analytics_prod.stg_subscription_events</span> <span class="chip chip--risk"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2v3M7 9.3v.5"/></svg><span>landed, stale input</span></span></li><li class="tree__node" data-table="t_fct_gl_journal" data-run="run_8849"><span class="mono wrapany">analytics_prod.fct_gl_journal</span> <span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed 05:49</span></span></li></ul></li><li class="tree__step"><p class="tree__lvl">Level 3</p><ul class="tree__nodes"><li class="tree__node" data-table="t_dim_customer" data-run="run_8845"><span class="mono wrapany">analytics_prod.dim_customer</span> <span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>landed 06:12</span></span></li></ul></li><li class="tree__step"><p class="tree__lvl">Level 4</p><ul class="tree__nodes"><li class="tree__node" data-table="t_fct_subscription_revenue_daily" data-run="run_8846"><span class="mono wrapany">analytics_prod.fct_subscription_revenue_daily</span> <span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>write failed</span></span></li></ul></li><li class="tree__step"><p class="tree__lvl">Level 5</p><ul class="tree__nodes"><li class="tree__node" data-table="t_mart_finance_revenue_eu" data-run="run_8847"><span class="mono wrapany">analytics_prod.mart_finance_revenue_eu</span> <span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>blocked</span></span></li></ul></li><li class="tree__step"><p class="tree__lvl">Level 6</p><ul class="tree__nodes"><li class="tree__node" data-table="" data-run=""><span class="mono wrapany">Looker: Revenue EU</span> <span class="chip chip--risk"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2v3M7 9.3v.5"/></svg><span>serving 31 Oct</span></span></li><li class="tree__node" data-table="t_dim_salesforce_account" data-run="run_8857"><span class="mono wrapany">Salesforce accounts</span> <span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>blocked</span></span></li></ul></li></ol>
+    </div>
+    <div class="note when-partial">
+      <h3>Lineage is unavailable</h3>
+      <p>The lineage service has not answered since 08:28. Everything else on this page comes from the warehouse and the scheduler, so runs, freshness and incidents are current.</p>
+      <button type="button" class="btn btn--quiet" data-retry="1">Ask lineage again</button>
+    </div>
+    <div class="note note--err when-error">
+      <h3>Lineage did not load</h3>
+      <p>The lineage service answered 503. No graph is drawn, because a graph read at an unknown time is worse than none.</p>
+      <button type="button" class="btn btn--quiet" data-retry="1">Ask lineage again</button>
+    </div>
+    <div class="note when-empty">
+      <h3>No lineage yet</h3>
+      <p>Lineage is read from your warehouse's query history. It appears once a tracked table has been written once.</p>
+    </div>
+  </section>
+
+  <!-- incidents ----------------------------------------------------- -->
+  <section class="panel" id="incidents" aria-labelledby="inc-h">
+    <div class="panel__head">
+      <div class="panel__id">
+        <h2 id="inc-h">Incidents<span class="panel__count when-ready" id="inc-count">8 of 8</span></h2>
+        <p class="panel__sub when-ready">4 open, 2 acknowledged, 2 resolved. The oldest unresolved one has been open 717d 20h.</p>
+      </div>
+      <div class="panel__tools">
+        <div class="chips" role="group" aria-label="Filter incidents by severity">
+          <button type="button" class="fchip" data-is="all" aria-pressed="true">All</button>
+          <button type="button" class="fchip" data-is="1" aria-pressed="false">Sev 1</button>
+          <button type="button" class="fchip" data-is="2" aria-pressed="false">Sev 2</button>
+          <button type="button" class="fchip" data-is="3" aria-pressed="false">Sev 3</button>
+          <button type="button" class="fchip" data-is="open" aria-pressed="false">Open or acknowledged <span class="when-ready">(6)</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="when-ready">
+      <ul class="incs" id="inc-body"><li class="inc" id="INC-2291" data-inc="INC-2291" data-sev="1" data-status="open" data-runs="run_8841 run_8846 run_8847" data-tables="t_raw_stripe_charges t_fct_subscription_revenue_daily t_mart_finance_revenue_eu">
+  <div class="inc__top">
+    <span class="sev sev--1"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Sev 1</span></span>
+    <h3 class="inc__title">Stripe charges ingest rejects the new disputes column</h3>
+    <span class="inc__status"><span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>open</span></span></span>
+    <button type="button" class="btn btn--quiet inc__ack" data-ack="INC-2291">Acknowledge</button>
+    
+  </div>
+  <p class="inc__meta">
+    <span class="mono">INC-2291</span>
+    <span class="inc__f"><span class="inc__k">started</span> <span class="mono">08:01</span></span>
+    <span class="inc__f"><span class="inc__k">open for</span> <span class="mono">41m</span></span>
+    <span class="inc__f"><span class="inc__k">owner</span> Payments Data, R. O'Dwyer</span>
+    <span class="inc__f"><span class="inc__k">hits</span> <span class="mono">3</span> runs, <span class="mono">3</span> tables</span>
+  </p>
+  
+  
+  <p class="inc__ackd" hidden>Acknowledged in this page only. Nothing was sent to a pager.</p>
+</li><li class="inc" id="INC-2286" data-inc="INC-2286" data-sev="3" data-status="open" data-runs="run_8856 run_8857" data-tables="t_raw_salesforce_opportunity t_dim_salesforce_account">
+  <div class="inc__top">
+    <span class="sev sev--3"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8" stroke-dasharray="2.2 2"/></svg><span>Sev 3</span></span>
+    <h3 class="inc__title">Salesforce opportunity sync throttled by the API limit</h3>
+    <span class="inc__status"><span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>open</span></span></span>
+    
+    <button type="button" class="btn btn--quiet inc__ack" disabled aria-disabled="true" title="Revenue Ops owns this one, and you are on the Payments Data and Platform rotas.">Acknowledge</button>
+  </div>
+  <p class="inc__meta">
+    <span class="mono">INC-2286</span>
+    <span class="inc__f"><span class="inc__k">started</span> <span class="mono">04:43</span></span>
+    <span class="inc__f"><span class="inc__k">open for</span> <span class="mono">3h 59m</span></span>
+    <span class="inc__f"><span class="inc__k">owner</span> Revenue Ops, Priya Ramanathan</span>
+    <span class="inc__f"><span class="inc__k">hits</span> <span class="mono">2</span> runs, <span class="mono">2</span> tables</span>
+  </p>
+  <p class="inc__why">Revenue Ops owns this one, and you are on the Payments Data and Platform rotas.</p>
+  
+  <p class="inc__ackd" hidden>Acknowledged in this page only. Nothing was sent to a pager.</p>
+</li><li class="inc" id="INC-2102" data-inc="INC-2102" data-sev="3" data-status="open" data-runs="" data-tables="t_dim_date">
+  <div class="inc__top">
+    <span class="sev sev--3"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8" stroke-dasharray="2.2 2"/></svg><span>Sev 3</span></span>
+    <h3 class="inc__title">dim_date stops at 2026-12-31</h3>
+    <span class="inc__status"><span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>open</span></span></span>
+    
+    <button type="button" class="btn btn--quiet inc__ack" disabled aria-disabled="true" title="Core Data owns this one, and you are on the Payments Data and Platform rotas.">Acknowledge</button>
+  </div>
+  <p class="inc__meta">
+    <span class="mono">INC-2102</span>
+    <span class="inc__f"><span class="inc__k">started</span> <span class="mono">2026-04-21 00:00</span></span>
+    <span class="inc__f"><span class="inc__k">open for</span> <span class="mono">194d 8h</span></span>
+    <span class="inc__f"><span class="inc__k">owner</span> Core Data, Wei Chen</span>
+    <span class="inc__f"><span class="inc__k">hits</span> <span class="mono">0</span> runs, <span class="mono">1</span> table</span>
+  </p>
+  <p class="inc__why">Core Data owns this one, and you are on the Payments Data and Platform rotas.</p>
+  
+  <p class="inc__ackd" hidden>Acknowledged in this page only. Nothing was sent to a pager.</p>
+</li><li class="inc" id="INC-1904" data-inc="INC-1904" data-sev="3" data-status="open" data-runs="" data-tables="">
+  <div class="inc__top">
+    <span class="sev sev--3"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8" stroke-dasharray="2.2 2"/></svg><span>Sev 3</span></span>
+    <h3 class="inc__title">raw_prod.mysql_shards_01 still replicating after decommission</h3>
+    <span class="inc__status"><span class="chip chip--breach"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>open</span></span></span>
+    <button type="button" class="btn btn--quiet inc__ack" data-ack="INC-1904">Acknowledge</button>
+    
+  </div>
+  <p class="inc__meta">
+    <span class="mono">INC-1904</span>
+    <span class="inc__f"><span class="inc__k">started</span> <span class="mono">2024-11-13 12:00</span></span>
+    <span class="inc__f"><span class="inc__k">open for</span> <span class="mono">717d 20h</span></span>
+    <span class="inc__f"><span class="inc__k">owner</span> Platform, Aarav Nair</span>
+    <span class="inc__f"><span class="inc__k">hits</span> <span class="mono">0</span> runs, <span class="mono">0</span> tables</span>
+  </p>
+  
+  
+  <p class="inc__ackd" hidden>Acknowledged in this page only. Nothing was sent to a pager.</p>
+</li><li class="inc" id="INC-2294" data-inc="INC-2294" data-sev="2" data-status="acknowledged" data-runs="run_8862" data-tables="t_expectation_results">
+  <div class="inc__top">
+    <span class="sev sev--2"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2v3M7 9.3v.5"/></svg><span>Sev 2</span></span>
+    <h3 class="inc__title">4 of 212 expectations failed on the revenue fact</h3>
+    <span class="inc__status"><span class="chip chip--risk"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2v3M7 9.3v.5"/></svg><span>acknowledged</span></span></span>
+    
+    
+  </div>
+  <p class="inc__meta">
+    <span class="mono">INC-2294</span>
+    <span class="inc__f"><span class="inc__k">started</span> <span class="mono">08:23</span></span>
+    <span class="inc__f"><span class="inc__k">open for</span> <span class="mono">19m</span></span>
+    <span class="inc__f"><span class="inc__k">owner</span> Platform, Aarav Nair</span>
+    <span class="inc__f"><span class="inc__k">hits</span> <span class="mono">1</span> run, <span class="mono">1</span> table</span>
+  </p>
+  
+  <p class="inc__why">Acknowledged 08:29 by Aarav Nair.</p>
+  <p class="inc__ackd" hidden>Acknowledged in this page only. Nothing was sent to a pager.</p>
+</li><li class="inc" id="INC-2288" data-inc="INC-2288" data-sev="2" data-status="acknowledged" data-runs="run_8850 run_8851 run_8852" data-tables="t_raw_kafka_clickstream_events t_stg_clickstream_sessions t_fct_product_adoption_weekly">
+  <div class="inc__top">
+    <span class="sev sev--2"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2v3M7 9.3v.5"/></svg><span>Sev 2</span></span>
+    <h3 class="inc__title">Clickstream consumer lag above 40 minutes</h3>
+    <span class="inc__status"><span class="chip chip--risk"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M7 4.2v3M7 9.3v.5"/></svg><span>acknowledged</span></span></span>
+    
+    
+  </div>
+  <p class="inc__meta">
+    <span class="mono">INC-2288</span>
+    <span class="inc__f"><span class="inc__k">started</span> <span class="mono">05:18</span></span>
+    <span class="inc__f"><span class="inc__k">open for</span> <span class="mono">3h 24m</span></span>
+    <span class="inc__f"><span class="inc__k">owner</span> Platform, Aarav Nair</span>
+    <span class="inc__f"><span class="inc__k">hits</span> <span class="mono">3</span> runs, <span class="mono">3</span> tables</span>
+  </p>
+  
+  <p class="inc__why">Acknowledged 05:25 by Aarav Nair.</p>
+  <p class="inc__ackd" hidden>Acknowledged in this page only. Nothing was sent to a pager.</p>
+</li><li class="inc" id="INC-2241" data-inc="INC-2241" data-sev="1" data-status="resolved" data-runs="" data-tables="">
+  <div class="inc__top">
+    <span class="sev sev--1"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 1.9 12.6 11.6H1.4Z"/><path d="M7 5.3v2.6M7 9.6v.6"/></svg><span>Sev 1</span></span>
+    <h3 class="inc__title">Warehouse credits exhausted on the EU reader</h3>
+    <span class="inc__status"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>resolved</span></span></span>
+    
+    
+  </div>
+  <p class="inc__meta">
+    <span class="mono">INC-2241</span>
+    <span class="inc__f"><span class="inc__k">started</span> <span class="mono">2026-10-30 07:00</span></span>
+    <span class="inc__f"><span class="inc__k">lasted</span> <span class="mono">2h 39m</span></span>
+    <span class="inc__f"><span class="inc__k">owner</span> Platform, Aarav Nair</span>
+    <span class="inc__f"><span class="inc__k">hits</span> <span class="mono">0</span> runs, <span class="mono">0</span> tables</span>
+  </p>
+  
+  
+  <p class="inc__ackd" hidden>Acknowledged in this page only. Nothing was sent to a pager.</p>
+</li><li class="inc" id="INC-2279" data-inc="INC-2279" data-sev="3" data-status="resolved" data-runs="run_8863" data-tables="">
+  <div class="inc__top">
+    <span class="sev sev--3"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.8" stroke-dasharray="2.2 2"/></svg><span>Sev 3</span></span>
+    <h3 class="inc__title">Looker rebuild ran past its 03:00 window</h3>
+    <span class="inc__status"><span class="chip chip--landed"><svg class="ico" viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 7.6 5.6 10.7 11.5 3.9"/></svg><span>resolved</span></span></span>
+    
+    
+  </div>
+  <p class="inc__meta">
+    <span class="mono">INC-2279</span>
+    <span class="inc__f"><span class="inc__k">started</span> <span class="mono">03:08</span></span>
+    <span class="inc__f"><span class="inc__k">lasted</span> <span class="mono">4h 58m</span></span>
+    <span class="inc__f"><span class="inc__k">owner</span> Growth Analytics, Lena Oduya</span>
+    <span class="inc__f"><span class="inc__k">hits</span> <span class="mono">1</span> run, <span class="mono">0</span> tables</span>
+  </p>
+  
+  
+  <p class="inc__ackd" hidden>Acknowledged in this page only. Nothing was sent to a pager.</p>
+</li></ul>
+      <div class="note when-filtered" id="inc-none" hidden>
+        <h3>No incident matches this filter</h3>
+        <p id="inc-none-why"></p>
+        <button type="button" class="btn btn--quiet" data-clear="inc">Clear the incident filter</button>
+      </div>
+    </div>
+    <div class="skel when-loading" aria-hidden="true"><div class="skel__r"><span class="skel__b" style="width:60%"></span><span class="skel__b" style="width:14%"></span></div><div class="skel__r"><span class="skel__b" style="width:60%"></span><span class="skel__b" style="width:14%"></span></div><div class="skel__r"><span class="skel__b" style="width:60%"></span><span class="skel__b" style="width:14%"></span></div><div class="skel__r"><span class="skel__b" style="width:60%"></span><span class="skel__b" style="width:14%"></span></div></div>
+    <div class="note note--err when-error">
+      <h3>Incidents did not load</h3>
+      <p>The incident store answered 401. Your session may have expired in that tool.</p>
+      <button type="button" class="btn btn--quiet" data-retry="1">Try again</button>
+    </div>
+    <div class="note when-noperm">
+      <h3>You cannot see incidents for this warehouse</h3>
+      <p>Incident detail needs the <span class="mono">incidents.read</span> role on <span class="mono">eu-west-1 / prod</span>. Runs and freshness above do not need it. Ask the Platform rota, or open the incident in your own tool.</p>
+      <button type="button" class="btn btn--quiet" data-demo-action="Requesting incidents.read">Request access</button>
+      <p class="inline-note" data-demo-note hidden></p>
+    </div>
+    <div class="note when-empty">
+      <h3>No incident has ever been opened here</h3>
+      <p>Sluice opens one when a run fails twice or a deadline passes. Nothing to show yet is the good case.</p>
+    </div>
+  </section>
+
+  <footer class="sample" style="margin-top:var(--s4)"><b>Not a product.</b><span>A single static file with no backend, built to a written design system. Controls change this page only.</span></footer>
+</div>
+
+<script>
+
+(function(){
+  "use strict";
+  var root=document.body, doc=document;
+  var $=function(s,c){return (c||doc).querySelector(s)}, $$=function(s,c){return Array.prototype.slice.call((c||doc).querySelectorAll(s))};
+
+  /* ── state preview ─────────────────────────────────────── */
+  var sel=$("#statesel");
+  function setState(v){
+    root.dataset.state = (v==="single") ? "ready" : v;
+    root.dataset.single = (v==="single") ? "1" : "";
+    filterRuns(); filterFresh(); filterInc();
+  }
+  sel.addEventListener("change",function(){ setState(sel.value); });
+
+  $("#reload").addEventListener("click",function(){
+    var back = sel.value==="single" ? "single" : "ready";
+    sel.value="loading"; setState("loading");
+    window.setTimeout(function(){ sel.value=back; setState(back); },700);
+  });
+  $$("[data-retry]").forEach(function(b){ b.addEventListener("click",function(){ sel.value="ready"; setState("ready"); }); });
+  $$("[data-demo-action]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var n=b.parentNode.querySelector("[data-demo-note]");
+      if(n){ n.textContent = b.getAttribute("data-demo-action")+" is not wired up in this sample. Nothing was sent."; n.hidden=false; }
+    });
+  });
+
+  /* ── filters: these move rows, not labels ──────────────── */
+  var runState="all", runTeam="all", runQ="";
+  var runRows=$$("#runs-body tr.row");
+  function runLabel(){
+    var p=[];
+    if(runState!=="all") p.push('state "'+runState+'"');
+    if(runTeam!=="all") p.push('team "'+runTeam+'"');
+    if(runQ) p.push('search "'+runQ+'"');
+    return p.join(", ");
+  }
+  function filterRuns(){
+    var single = root.dataset.single==="1", shown=0, first=true;
+    runRows.forEach(function(tr){
+      var st=tr.dataset.state;
+      var stOk = runState==="all" || st===runState || (runState==="running" && st==="retrying");
+      var tmOk = runTeam==="all" || tr.dataset.team===runTeam;
+      var qOk = !runQ || tr.dataset.q.indexOf(runQ)>-1;
+      var keep = stOk&&tmOk&&qOk;
+      if(single){ keep = keep && first; if(keep) first=false; }
+      tr.classList.toggle("is-out",!keep);
+      var d=doc.getElementById("d_"+tr.dataset.run);
+      if(d&&!keep){ d.hidden=true; var b=tr.querySelector(".rowbtn"); if(b) b.setAttribute("aria-expanded","false"); }
+      if(keep) shown++;
+    });
+    $("#runs-count").textContent = shown+" of "+runRows.length;
+    var none=$("#runs-none"); none.hidden = shown>0;
+    if(shown===0) $("#runs-none-why").textContent = "Nothing in the "+runRows.length+" runs of this window matches "+runLabel()+".";
+  }
+  $$("[data-rs]").forEach(function(b){
+    b.addEventListener("click",function(){
+      runState=b.getAttribute("data-rs");
+      $$("[data-rs]").forEach(function(o){ o.setAttribute("aria-pressed", String(o===b)); });
+      filterRuns();
+    });
+  });
+  $("#teamsel").addEventListener("change",function(e){ runTeam=e.target.value; filterRuns(); });
+  $("#runq").addEventListener("input",function(e){ runQ=e.target.value.trim().toLowerCase(); filterRuns(); });
+
+  var freshState="all", freshDom="all", freshQ="";
+  var freshRows=$$("#fresh-body tr.row");
+  function freshLabel(){
+    var p=[];
+    if(freshState!=="all") p.push('state "'+freshState+'"');
+    if(freshDom!=="all") p.push('domain "'+freshDom+'"');
+    if(freshQ) p.push('search "'+freshQ+'"');
+    return p.join(", ");
+  }
+  function filterFresh(){
+    var shown=0;
+    freshRows.forEach(function(tr){
+      var keep = (freshState==="all"||tr.dataset.fresh===freshState)
+        && (freshDom==="all"||tr.querySelector(".t-team").textContent===freshDom)
+        && (!freshQ||tr.dataset.q.indexOf(freshQ)>-1);
+      tr.classList.toggle("is-out",!keep);
+      var d=doc.getElementById("df_"+tr.dataset.table);
+      if(d&&!keep){ d.hidden=true; var b=tr.querySelector(".rowbtn"); if(b) b.setAttribute("aria-expanded","false"); }
+      if(keep) shown++;
+    });
+    $("#fresh-count").textContent = shown+" of "+freshRows.length;
+    var none=$("#fresh-none"); none.hidden = shown>0;
+    if(shown===0) $("#fresh-none-why").textContent = "None of the "+freshRows.length+" tracked tables matches "+freshLabel()+".";
+  }
+  $$("[data-fs]").forEach(function(b){
+    b.addEventListener("click",function(){
+      freshState=b.getAttribute("data-fs");
+      $$("[data-fs]").forEach(function(o){ o.setAttribute("aria-pressed", String(o===b)); });
+      filterFresh();
+    });
+  });
+  $("#domsel").addEventListener("change",function(e){ freshDom=e.target.value; filterFresh(); });
+  $("#freshq").addEventListener("input",function(e){ freshQ=e.target.value.trim().toLowerCase(); filterFresh(); });
+
+  var incState="all", incItems=$$("#inc-body .inc");
+  function filterInc(){
+    var shown=0;
+    incItems.forEach(function(li){
+      var keep = incState==="all"
+        || (incState==="open" ? (li.dataset.status==="open"||li.dataset.status==="acknowledged") : li.dataset.sev===incState);
+      li.classList.toggle("is-out",!keep);
+      if(keep) shown++;
+    });
+    $("#inc-count").textContent = shown+" of "+incItems.length;
+    var none=$("#inc-none"); none.hidden = shown>0;
+    if(shown===0) $("#inc-none-why").textContent = "None of the "+incItems.length+" incidents matches "+(incState==="open"?"\"still open\"":"severity "+incState)+".";
+  }
+  $$("[data-is]").forEach(function(b){
+    b.addEventListener("click",function(){
+      incState=b.getAttribute("data-is");
+      $$("[data-is]").forEach(function(o){ o.setAttribute("aria-pressed", String(o===b)); });
+      filterInc();
+    });
+  });
+
+  $$("[data-clear]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var w=b.getAttribute("data-clear");
+      if(w==="runs"){ runState="all"; runTeam="all"; runQ=""; $("#teamsel").value="all"; $("#runq").value="";
+        $$("[data-rs]").forEach(function(o){ o.setAttribute("aria-pressed", String(o.getAttribute("data-rs")==="all")); }); filterRuns(); }
+      if(w==="fresh"){ freshState="all"; freshDom="all"; freshQ=""; $("#domsel").value="all"; $("#freshq").value="";
+        $$("[data-fs]").forEach(function(o){ o.setAttribute("aria-pressed", String(o.getAttribute("data-fs")==="all")); }); filterFresh(); }
+      if(w==="inc"){ incState="all";
+        $$("[data-is]").forEach(function(o){ o.setAttribute("aria-pressed", String(o.getAttribute("data-is")==="all")); }); filterInc(); }
+    });
+  });
+
+  $("[data-filter-breach]").addEventListener("click",function(){
+    freshState="breach";
+    $$("[data-fs]").forEach(function(o){ o.setAttribute("aria-pressed", String(o.getAttribute("data-fs")==="breach")); });
+    filterFresh();
+    $("#fresh").scrollIntoView({block:"start",behavior:"smooth"});
+  });
+
+  /* ── the wiring: one run, its tables, its lineage, its incident ── */
+  var linNodes=$$(".node"), treeNodes=$$(".tree__node");
+  function link(runId, tableIds){
+    $$(".is-link").forEach(function(e){ e.classList.remove("is-link"); });
+    if(!runId && !tableIds) { guideOff(); return; }
+    var tset = tableIds || [];
+    if(runId){
+      freshRows.forEach(function(tr){ if(tr.dataset.run===runId) { tr.classList.add("is-link"); tset.push(tr.dataset.table); } });
+      runRows.forEach(function(tr){ if(tr.dataset.run===runId) tr.classList.add("is-link"); });
+      incItems.forEach(function(li){ if((" "+li.dataset.runs+" ").indexOf(" "+runId+" ")>-1) li.classList.add("is-link"); });
+    }
+    tset.forEach(function(t){
+      if(!t) return;
+      linNodes.concat(treeNodes).forEach(function(n){ if(n.dataset.table===t) n.classList.add("is-link"); });
+      freshRows.forEach(function(tr){ if(tr.dataset.table===t) tr.classList.add("is-link"); });
+    });
+    linNodes.concat(treeNodes).forEach(function(n){ if(runId && n.dataset.run===runId) n.classList.add("is-link"); });
+  }
+  var guide=$("#guide"), scale=$(".axis__scale");
+  function guideAt(p){
+    if(!scale||!scale.offsetWidth) return;
+    guide.hidden=false;
+    guide.style.transform="translateX("+(p/100*scale.offsetWidth)+"px)";
+  }
+  function guideOff(){ guide.hidden=true; }
+
+  function runEnd(tr){
+    var bar=tr.querySelector(".bar");
+    if(!bar) return null;
+    return parseFloat(bar.style.left)+parseFloat(bar.style.width);
+  }
+  runRows.forEach(function(tr){
+    var id=tr.dataset.run;
+    tr.addEventListener("mouseenter",function(){ link(id); var p=runEnd(tr); if(p!==null) guideAt(p); });
+    tr.addEventListener("mouseleave",function(){ link(null); });
+    var btn=tr.querySelector(".rowbtn");
+    btn.addEventListener("focus",function(){ link(id); var p=runEnd(tr); if(p!==null) guideAt(p); });
+    btn.addEventListener("blur",function(){ link(null); });
+    btn.addEventListener("click",function(){ toggleRun(tr,btn); });
+    tr.addEventListener("click",function(e){ if(e.target.closest(".rowbtn")) return; toggleRun(tr,btn); });
+  });
+  function toggleRun(tr,btn){
+    var d=doc.getElementById("d_"+tr.dataset.run);
+    var open = btn.getAttribute("aria-expanded")==="true";
+    runRows.forEach(function(o){
+      o.classList.remove("is-sel");
+      var ob=o.querySelector(".rowbtn"); if(ob) ob.setAttribute("aria-expanded","false");
+      var od=doc.getElementById("d_"+o.dataset.run); if(od) od.hidden=true;
+    });
+    $$(".is-sel").forEach(function(e){ e.classList.remove("is-sel"); });
+    if(!open){
+      btn.setAttribute("aria-expanded","true");
+      if(d) d.hidden=false;
+      tr.classList.add("is-sel");
+      var id=tr.dataset.run, hit=false;
+      linNodes.concat(treeNodes).forEach(function(n){ if(n.dataset.run===id){ n.classList.add("is-sel"); hit=true; } });
+      var sub=$("#lin-sub");
+      if(!hit && !sub.dataset.orig) sub.dataset.orig=sub.textContent;
+      if(!hit) sub.textContent = tr.querySelector(".rowbtn__name").textContent+" writes nothing on this lineage path.";
+      else if(sub.dataset.orig) sub.textContent=sub.dataset.orig;
+    }
+  }
+
+  freshRows.forEach(function(tr){
+    var t=tr.dataset.table, r=tr.dataset.run;
+    tr.addEventListener("mouseenter",function(){ link(r||null,[t]); });
+    tr.addEventListener("mouseleave",function(){ link(null); });
+    var btn=tr.querySelector(".rowbtn");
+    btn.addEventListener("focus",function(){ link(r||null,[t]); });
+    btn.addEventListener("blur",function(){ link(null); });
+    function toggle(){
+      var d=doc.getElementById("df_"+t);
+      var open=btn.getAttribute("aria-expanded")==="true";
+      btn.setAttribute("aria-expanded", open?"false":"true");
+      if(d) d.hidden=open;
+      tr.classList.toggle("is-sel",!open);
+    }
+    btn.addEventListener("click",toggle);
+    tr.addEventListener("click",function(e){ if(e.target.closest(".rowbtn")) return; toggle(); });
+  });
+
+  incItems.forEach(function(li){
+    li.addEventListener("mouseenter",function(){ link(null, li.dataset.tables? li.dataset.tables.split(" "):[]); });
+    li.addEventListener("mouseleave",function(){ link(null); });
+  });
+
+  $$("[data-jump-inc]").forEach(function(b){
+    b.addEventListener("click",function(e){
+      e.preventDefault();
+      var id=b.getAttribute("data-jump-inc");
+      if(root.dataset.state==="noperm"){ return; }
+      incState="all";
+      $$("[data-is]").forEach(function(o){ o.setAttribute("aria-pressed", String(o.getAttribute("data-is")==="all")); });
+      filterInc();
+      var li=doc.getElementById(id);
+      if(!li) return;
+      incItems.forEach(function(o){ o.classList.remove("is-target"); });
+      li.classList.add("is-target");
+      li.scrollIntoView({block:"center",behavior:"smooth"});
+      var ack=li.querySelector(".inc__ack");
+      if(ack && !ack.disabled) ack.focus({preventScroll:true});
+    });
+  });
+
+  $$("[data-ack]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var li=doc.getElementById(b.getAttribute("data-ack"));
+      var note=li.querySelector(".inc__ackd");
+      li.dataset.status="acknowledged";
+      note.hidden=false;
+      b.disabled=true; b.setAttribute("aria-disabled","true");
+      b.title="Already acknowledged on this page.";
+      var chip=li.querySelector(".inc__status .chip");
+      chip.className="chip chip--risk";
+      chip.querySelector("span:last-child").textContent="acknowledged";
+      filterInc();
+    });
+  });
+
+  filterRuns(); filterFresh(); filterInc();
+})();
+</script>
+</body>
+</html>

@@ -158,6 +158,40 @@ ranked by fit, licence, stack, design system, accessibility and install cost,
 in that order. A licence that is not stated anywhere is a blocker, not a
 footnote.
 
+## The same prompt, with and without
+
+One blunt prompt, given twice. Once to a stock Claude Code started with
+`--safe-mode`, which disables CLAUDE.md, skills, plugins, hooks and MCP
+servers. Once to a Claude Code that has `ui-design`. Same model, same words,
+same output format.
+
+> Build a data platform observability console. It should show pipeline runs,
+> data lineage, table freshness, and incidents.
+
+No audience. No states. No design direction. No acceptance criteria.
+
+![The same prompt, at 1440](docs/images/ab-1-wide.png)
+
+![The same prompt, at 375](docs/images/ab-2-phone.png)
+
+The baseline reports four equal figures, so nothing says what to do now. The
+skilled arm names one figure and the consequence behind it. Four tables past
+their deadline. The one that is 1h 42m late. The 09:00 finance pack that is
+therefore not safe. Then two actions, and one time axis every panel hangs
+off.
+
+The part that would survive someone disliking the design is what the skilled
+arm caught in its own work. Reviewing before it finished, it found **eight
+false statements in its own interface**. An incident counted as resolved while
+still mitigating. A table showing green "landed" while lineage called the same
+table stale. A title claiming six days against a five-hour span. No linter
+reports any of those.
+
+Both builds are in `demo/ab/`. The method, the numbers, the defect the skilled
+arm missed, and the two ways the harness itself went wrong are in
+[docs/ab-test.md](docs/ab-test.md). It is one prompt and one run each: it
+shows what the skill changed here, not an average.
+
 ## The design system comes first
 
 A review with no stated principles is taste, and taste loses arguments. So
