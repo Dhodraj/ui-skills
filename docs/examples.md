@@ -35,9 +35,9 @@ Accept  1  The late count is the largest thing on the screen.
         4  The empty state says what to do first.
 ```
 
-Then it stops and puts the proposal — skeleton, components with sources,
-scales as values, states, cost, one alternative — to the user, through
-`blueprint` where a single screen is in question. Nothing is built on silence.
+Then it stops and puts the proposal to the user: skeleton, components with
+sources, scales as values, states, cost, one alternative. Nothing is built on
+silence.
 
 **Stages D to G** map the journey and its states, set the direction from the
 product's own world, search for components before writing any, and build

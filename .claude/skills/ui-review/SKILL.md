@@ -64,14 +64,38 @@ text contrast, target sizes, controls with no accessible name, heading order,
 unsized media and text below 12px. It also returns a census of the type sizes,
 radii, shadows and font families the page really uses.
 
-Then look at the screenshots yourself, at every width. The script cannot see
-hierarchy, rhythm, crowding, visual weight or whether the page is any good.
-
 Every number the script returns is a candidate, not a finding. Confirm it on
 the render, decide whether it harms a customer, and fold one cause into one
 finding.
 
-## 4. Walk it as a customer
+## 4. Look at the screenshots, in this order
+
+The script cannot see hierarchy, rhythm, crowding, visual weight or whether
+the page is any good. Open every screenshot at every width and walk these
+seven. Each one is a failure that renders wrong while the source reads fine.
+
+1. **Placement.** Is the main element where it belongs? Centre what should be
+   centred and align the rest to the grid. Is there a large empty region
+   carrying nothing?
+2. **Containment.** Does any text, number or label cross or touch the edge of
+   its card, column or button? Right-aligned values and long identifiers fail
+   here first.
+3. **Duplication.** Does the screen offer the same action twice? Does a
+   control the customer had before still exist?
+4. **Reachability at 375.** Is every control on screen? Is each target at
+   least 24 × 24, and 44 × 44 where a thumb is expected? Does anything need a
+   horizontal scroll?
+5. **Contrast.** Can you read every label against its own background,
+   including the pressed, hovered and selected states?
+6. **Rhythm.** Do the spacing and type sizes come from the product's scale, or
+   were they chosen for this screen alone?
+7. **State.** Render the states a customer will meet: empty, loading, one
+   item, many items, error. A screen built on fixtures hides all but one.
+
+Say which of the seven each finding is. Where you could not render, say so
+rather than judging from the source.
+
+## 5. Walk it as a customer
 
 A DOM is not an experience. Skip this only for a single static element.
 
@@ -131,14 +155,14 @@ When the application cannot be started or reached, stop. Say which it was — no
 server, no credentials, no data, a failing build — and mark every journey claim
 unverified. Reading the source is not a substitute.
 
-## 5. Sort every finding into its kind
+## 6. Sort every finding into its kind
 
 The kinds matter because they go to different people and cost different
 amounts to fix. Give each finding exactly one.
 
 1. **Product and information architecture.** The screen solves the wrong
-   problem, shows the system's internals rather than the customer's task, or
-   buries what the job needs behind what the database holds.
+   problem. Or it shows the system's internals rather than the customer's
+   task. Or it buries what the job needs behind what the database holds.
 2. **Journey and usability** — the customer cannot get from the entry point to
    the outcome without confusion, a dead end or a detour.
 3. **Design system** — values off the system in `DESIGN.md` or the token file:
@@ -154,7 +178,7 @@ amounts to fix. Give each finding exactly one.
    palette, a fixture that hides the dense case, a layout that cannot hold
    long content.
 
-## 6. Severity, by harm to the customer
+## 7. Severity, by harm to the customer
 
 Never by how easy the fix is.
 
@@ -171,7 +195,7 @@ Order the report by harm, then by how many customers meet it, then by how
 often, then by business consequence. Where two findings share a cause, the
 cause is the finding and the occurrences are its evidence.
 
-## 7. What not to flag
+## 8. What not to flag
 
 - **Deliberate, consistent choices.** A dense 32px control row on a
   pointer-first console, a labelled zoomed axis, an established domain
@@ -189,7 +213,7 @@ cause is the finding and the occurrences are its evidence.
 - **Taste.** Every finding names who it hurts and how.
 - **The same cause twice.**
 
-## 8. Finding format
+## 9. Finding format
 
 ```
 C2. Run status shown by colour alone  (.run-row .status, 40 rows)
@@ -204,7 +228,7 @@ Evidence: shots/1440-runs.png, measure-1440.json contrastFailures[3]
 
 One line each for polish items. Keep `Found` and `Why` to one or two lines.
 
-## 9. The report
+## 10. The report
 
 ```
 # UI review: <surface>
@@ -236,7 +260,7 @@ things that were right.
 No score out of 100. A number invites arguing about the number instead of
 fixing the blocker, and the severity list already carries the order.
 
-## 10. In review-and-fix mode
+## 11. In review-and-fix mode
 
 1. Get the fix list agreed, or fix only blockers and critical findings and say
    that is what you did.

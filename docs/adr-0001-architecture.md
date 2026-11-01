@@ -14,11 +14,11 @@ sources were supplied to draw on; the reading is in
 Two facts about this machine shaped the design more than anything in the
 brief.
 
-1. **Two of the jobs are already done here.** The `blueprint` skill plans a
-   screen and carries the numeric defaults in its `rules.md`; the `inspect`
-   skill renders a screen at three widths and reads the images against seven
-   named checks. Both are the user's own work. A new skill that restated
-   either would create a second source of truth for the same numbers.
+1. **Two of the jobs were already done elsewhere.** The author's `blueprint`
+   skill planned a screen and carried the numeric defaults. Its `inspect`
+   skill rendered a screen at three widths and read the images against seven
+   named checks. Both are the author's own work. The first design referenced
+   them rather than restating them, to avoid a second source of truth.
 2. **A browser is already connected.** The Playwright MCP server answers
    here, with Chromium installed. Anything that needs a second browser stack —
    Python Playwright, a downloaded binary — is a dependency this machine does
@@ -32,9 +32,8 @@ breaking what worked.
 
 ## Decision
 
-One entry-point skill, `ui-design`, with twelve stages
-that scale to the size of the change, and three companion skills that are
-worth invoking on their own:
+One entry-point skill, `ui-design`, with eleven stages that scale to the size
+of the change, and two companion skills worth invoking on their own:
 
 | Skill | Why it is separate |
 |---|---|
@@ -43,8 +42,14 @@ worth invoking on their own:
 | `ui-review` | "Audit this" must not start editing; a separate skill makes the two modes explicit. Walking a journey as a customer lives here too: it is the verification step for every other skill, and splitting it out left two skills that could not be used without each other |
 
 Everything else is a reference document under the entry point, loaded when
-the stage needs it: product thinking, visual direction, craft, the journey
-and its states, browser mechanics, regression checks.
+the stage needs it: the design system format, the gates, product thinking,
+directions, craft, the journey and its states, browser mechanics, regression
+checks.
+
+On 2026-11-01 that referencing was reversed. Depending on a second repository
+for the numbers made `ui-design` unusable without it, so `rules.md`, the
+dense-screen rules and `inspect`'s seven checks were absorbed, and
+`blueprint-ui` was marked superseded.
 
 `references/craft.md` was added after the first build. The skill as first
 written could prove a screen was not wrong. It could not stop the screen
@@ -61,17 +66,16 @@ Two scripts, because both do something no instruction can do reliably:
 - `scripts/measure.js` measures a rendered page in the browser and returns
   numbers.
 
-Plus `scripts/check-sources.js` and `tests/run.sh`, following the shape the
-`blueprint` skill already uses on this machine.
+Plus `scripts/check-sources.js` and `tests/run.sh`.
 
 ## Why not the alternatives
 
 | Alternative | Why not |
 |---|---|
-| One large skill | The brief's twelve stages, the component rules, the browser mechanics and the audit model come to several thousand words. Loading all of it to change a label is waste, and a skill nobody can read is a skill nobody follows |
+| One large skill | The eleven stages, the component rules, the browser mechanics and the audit model come to several thousand words. Loading all of it to change a label is waste, and a skill nobody can read is a skill nobody follows |
 | A skill per stage, ten or more | Most stages are never invoked alone. A stage that is only ever reached through the workflow is a reference document, not a skill |
 | Vendor ui-ux-audit's `uicheck.py` | MIT allows it, and it is the best measuring script read in this research. But it needs Python Playwright, a second browser stack beside the MCP server that is already connected. `measure.js` runs through what is here. The severity model from that skill is adapted and credited instead |
-| Copy blueprint's `rules.md` numbers in | Two copies of a number drift. This skill points at that file and states a floor only for the case where it is not installed |
+| Keep pointing at blueprint's `rules.md` for the numbers | It was the first design, and it made `ui-design` unusable without a second repo installed. On 2026-11-01 the numbers, the dense-screen rules and `inspect`'s seven checks were absorbed into `references/directions.md`, `references/craft.md` and `ui-review`, and `blueprint-ui` was marked superseded |
 | Build discovery on the 21st.dev MCP | Its component retrieval starts at a paid plan, and the free tier is two copies a day. The shadcn directory is free, scriptable and covers 508 registries including most of what 21st indexes |
 | Require the shadcn MCP server | It is supported and useful, but a skill that only works with an MCP server configured does not work on a fresh machine. The script needs only Node and the network, and `--curated-only` keeps it useful with neither |
 | Install impeccable or taste-skill as dependencies | Both are good, and both are the user's decision: impeccable downloads a binary on first run, and taste-skill is a large asset library. They are referenced where they are the better tool |
@@ -86,8 +90,8 @@ Plus `scripts/check-sources.js` and `tests/run.sh`, following the shape the
 
 **Good**
 
-- Nothing is duplicated: the numbers stay in `blueprint`, the look stays in
-  `inspect`, the research method stays in `customer-research`.
+- The research method stays in `customer-research` rather than being
+  restated here.
 - The core — product thinking, journey mapping, visual direction, the audit —
   works with no network and no registry: only `ui-find` needs either.
 - Component discovery is deterministic and free, and its output names its own
@@ -97,9 +101,9 @@ Plus `scripts/check-sources.js` and `tests/run.sh`, following the shape the
 
 **Bad, and accepted**
 
-- Referring to `blueprint`, `inspect`, `taste-skill` and `customer-research`
-  means a machine without them gets less. Each reference says what to do
-  instead, but the fallback is thinner than the real thing.
+- Referring to `taste-skill` and `customer-research` means a machine without
+  them gets less. Each reference says what to do instead, but the fallback is
+  thinner than the real thing.
 - `measure.js` has to be passed to `browser_evaluate` as a string, which
   costs tokens on the first measurement of each page. It leaves itself on the
   page as `window.pxeMeasure` so the later widths cost one line, but a page
@@ -134,6 +138,5 @@ Plus `scripts/check-sources.js` and `tests/run.sh`, following the shape the
   like it, would earn its dependency.
 - If a free registry index with real semantic search appeared, step 3 of
   `ui-find` would change.
-- If `blueprint` and `inspect` were removed from this machine, the floor
-  stated in `references/directions.md` would have to become the full
-  set of numbers.
+- If the numbers in `references/directions.md` moved to a package of their
+  own, this skill would reference that package rather than carry the table.

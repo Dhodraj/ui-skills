@@ -91,14 +91,6 @@ When re-reading, update `licence`, `licence-read` and the top-level `updated`
 date together. Where a licence has changed, say so in `notes` rather than
 quietly overwriting it: the old reading explains decisions already made.
 
-**One correction is already pending.** The `blueprint` skill's
-`sources-read.md`, read on 2026-10-17, rejects coss.com/ui because "the
-repository is AGPL-3.0 and states no licence for the UI package". On
-2026-10-27 `cosscom/ui`'s `LICENSING.md` puts `apps/origin/` and `apps/ui/`
-under MIT. That file belongs to another skill, whose source of record is
-`~/Documents/Raw by Dhodraj/blueprint-ui`, so it is recorded here and in
-docs/source-research.md rather than edited.
-
 ## Refresh the research
 
 `docs/source-research.md` carries one date and every verdict. Revisit a

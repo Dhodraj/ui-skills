@@ -60,24 +60,34 @@ already considered and rejected.
 
 ## The numbers
 
-The numeric defaults live in the installed `blueprint` skill's `rules.md`.
-It covers body text size and line height, line length, type sizes per screen,
-contrast ratios and target sizes. It also covers the spacing scale, grouping,
-primary action count, greys, shadows, and the rules for dense screens. Read
-that file rather than a copy of it, and name any number the brief
-overrules.
+Defaults for building a screen. The brief can overrule any of them, and
+saying which one it overrules is part of the proposal.
 
-Where `blueprint` is not installed, the floor is:
+| What | Rule |
+|---|---|
+| Body text | 16px or larger, line height 1.5 to 1.6 |
+| Line length | 45 to 75 characters for prose |
+| Heading line height | 1.1 to 1.3 |
+| Type sizes | five on a screen at most |
+| Font weights | two, such as 400 and 600 |
+| Text contrast | 4.5:1 for body and placeholder text, 3:1 above 18px |
+| Boundary contrast | 3:1 for component edges and for focus rings |
+| Tap targets | 24 × 24 minimum, 44 × 44 where touch is likely, 8px apart |
+| Spacing scale | 4, 8, 12, 16, 24, 32, 48, 64, 96. Each step at least 25% above the last |
+| Grouping | space inside a group smaller than space between groups |
+| Headings | more space above a heading than below it |
+| Primary action | one per view. Others are outlined or quiet |
+| Greys | 8 to 10 of them. Text is never `#000` |
+| Brand colour | 5 to 10 shades of each |
+| Shadows | nothing at rest carries one. Separate surfaces by tone |
+| Cards | never nested |
+| Borders | no coloured side stripe wider than 1px |
+| Gradients | none on text. Weight and size carry emphasis |
+| Status | a word plus a shape or a position, never colour alone |
+| States | empty, loading, one item, many items, error, disabled, hover |
 
-- body text 16px or larger, line height 1.5;
-- at most five type sizes and two weights on a screen;
-- 4.5:1 contrast for body text, 3:1 for large text and for the parts that
-  identify a control;
-- targets of 24 × 24 minimum, and 44 × 44 where touch is likely;
-- a spacing scale whose steps each rise at least 25%;
-- more space above a heading than below it;
-- one primary action per view;
-- status never carried by colour alone.
+Contrast ratios are WCAG 2.2 AA. 24 × 24 is WCAG 2.5.8. The 44px target is
+Apple's Human Interface Guidelines.
 
 ## What to decide, and write down as values
 

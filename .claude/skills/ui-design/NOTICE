@@ -48,9 +48,10 @@ Taken as ideas, reworded and reduced:
 
 - nextlevelbuilder/ui-ux-pro-max-skill, MIT.
   https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
-  Read for its token architecture and its stack coverage. Nothing was taken
-  into this skill: the numeric defaults it contributed already live in the
-  blueprint skill's rules.md, under that skill's own NOTICE.
+  Taken: part of the numeric defaults in references/directions.md, by way of
+  the author's own blueprint skill, which adapted them first. Changed:
+  reduced to one table, reworded, and merged with the WCAG and Apple figures
+  that are nobody's skill.
 
 - jakubkrehel/make-interfaces-feel-better, MIT.
   https://github.com/jakubkrehel/make-interfaces-feel-better
@@ -138,11 +139,6 @@ Read and deliberately not adapted:
   inline SVG and is a tool to reach for, not a rule set to absorb.
 
 Referred to rather than reused:
-
-- The blueprint and inspect skills, the user's own work, MIT, upstream at
-  ~/Documents/Raw by Dhodraj/blueprint-ui. This skill points at blueprint's
-  rules.md for every numeric default and at inspect for the render-and-look
-  pass, rather than restating either.
 
 Public standards, which are not anybody's skill: WCAG 2.2 AA contrast ratios,
 WCAG 2.5.8 target size, and the 44 by 44 point target from Apple's Human

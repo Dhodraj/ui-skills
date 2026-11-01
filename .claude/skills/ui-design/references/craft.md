@@ -1,7 +1,7 @@
 # Craft
 
-Loaded at stage G, immediately before any UI edit. The numbers in the
-`blueprint` skill's `rules.md` stop a screen being wrong. These stop it being
+Loaded at stage 7, immediately before any UI edit. The numbers in
+[directions.md](directions.md) stop a screen being wrong. These stop it being
 forgettable. A correct screen and a screen people like are not the same
 screen, and the difference is almost always a pile of small things.
 
@@ -117,6 +117,19 @@ first screen animates on load and must not wait for a scroll.
 - Scale contrast is the cheapest way to make a screen feel designed. A
   display figure at 8 to 12 times the body size says what matters. Twelve
   things at 1.2 times say nothing.
+
+## Dense screens
+
+A table, a run list or a dependency view is not a landing page.
+
+- Row height stays constant. Density is decided once for the screen.
+- Numbers align right, and a column of numbers uses tabular figures.
+- A status is a word plus a shape or a position, never colour alone.
+- The header row stays visible while the body scrolls.
+- A long identifier truncates in the middle, with the full value reachable.
+- Every column earns its width. A column nobody reads is a column to drop.
+- An action that applies to a row lives in that row, not only in a bar above
+  it.
 
 ## Optical, not geometric
 

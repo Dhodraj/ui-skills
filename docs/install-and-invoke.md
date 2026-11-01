@@ -95,8 +95,6 @@ Adding an MCP server is a dependency. Ask the user first.
 
 | Skill | What it adds | Install |
 |---|---|---|
-| `blueprint` | the numeric defaults in `rules.md`, and the screen proposal | already on this machine |
-| `inspect` | the render-and-look pass and its seven checks | already on this machine |
 | `ui-ux-audit` | a deeper measuring script and 16 category references | `cp -r ui-ux-audit ~/.claude/skills/` from EnchStyle/ui-ux-audit-skill; needs Python Playwright |
 | `design-taste-frontend` | art direction for a public page, from a researched library | `npx skills add https://github.com/Leonxlnx/taste-skill --skill "design-taste-frontend"` |
 | `customer-research` | the method for real customer evidence | the marketingskills plugin marketplace |

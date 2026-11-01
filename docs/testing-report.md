@@ -196,10 +196,9 @@ dominant figure, a real scale and a phone layout, verified in a browser — but
 it was produced by fixing the before fixture under scenarios B and E, not by
 running stages A to C from a fresh brief with a user to approve the proposal.
 
-What was therefore **not** exercised: the approval gate at stage C, the
-blueprint hand-off for a screen proposal, component installation into a real
-project, and a build on a real stack with a dev server. These remain
-unverified.
+What was therefore **not** exercised: the approval gate at stage 3,
+component installation into a real project, and a build on a real stack with
+a dev server. These remain unverified.
 
 ## Scenario A, second attempt — a dispatch console and its public page
 
