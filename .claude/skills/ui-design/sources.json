@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-27",
+  "updated": "2026-11-01",
   "note": "Curated component sources, read at the source on the date above. 'licence' records what was read, not what is assumed. Entries with a 'registry' url are searchable by scripts/find-components.js; the public directory at https://ui.shadcn.com/r/registries.json covers the other 500 registries.",
   "components": [
     {
@@ -8,7 +8,15 @@
       "url": "https://ui.shadcn.com",
       "registry": "https://ui.shadcn.com/r/{name}.json",
       "catalogue": "https://ui.shadcn.com/r/index.json",
-      "for": ["primitives", "form", "table", "dialog", "navigation", "sidebar", "login"],
+      "for": [
+        "primitives",
+        "form",
+        "table",
+        "dialog",
+        "navigation",
+        "sidebar",
+        "login"
+      ],
       "stack": "react+tailwind+shadcn",
       "licence": "MIT",
       "licence-read": "shadcn-ui/ui repository licence, 2026-10-27",
@@ -19,7 +27,14 @@
       "id": "@coss",
       "url": "https://coss.com/ui",
       "registry": "https://coss.com/ui/r/{name}.json",
-      "for": ["primitives", "form", "combobox", "date-picker", "table", "command"],
+      "for": [
+        "primitives",
+        "form",
+        "combobox",
+        "date-picker",
+        "table",
+        "command"
+      ],
       "stack": "react+tailwind+base-ui",
       "licence": "MIT for the UI packages; AGPL-3.0 is the repository default",
       "licence-read": "cosscom/ui LICENSING.md and apps/origin/LICENSE.md, 2026-10-27",
@@ -30,7 +45,13 @@
       "id": "@reui",
       "url": "https://reui.io",
       "registry": "https://reui.io/r/{style}/{name}.json",
-      "for": ["data-grid", "dense-table", "virtualised", "bulk-actions", "chart"],
+      "for": [
+        "data-grid",
+        "dense-table",
+        "virtualised",
+        "bulk-actions",
+        "chart"
+      ],
       "stack": "react+tailwind+shadcn",
       "licence": "MIT",
       "licence-read": "keenthemes/reui repository licence, 2026-10-27",
@@ -41,7 +62,13 @@
       "id": "@kibo-ui",
       "url": "https://www.kibo-ui.com",
       "registry": "https://www.kibo-ui.com/r/{name}.json",
-      "for": ["table", "kanban", "gantt", "calendar", "editor"],
+      "for": [
+        "table",
+        "kanban",
+        "gantt",
+        "calendar",
+        "editor"
+      ],
       "stack": "react+tailwind+shadcn",
       "licence": "MIT",
       "licence-read": "haydenbleasel/kibo repository licence, 2026-10-27",
@@ -52,7 +79,13 @@
       "id": "@magicui",
       "url": "https://magicui.design",
       "registry": "https://magicui.design/r/{name}",
-      "for": ["marketing-effect", "animated-text", "background", "marquee", "globe"],
+      "for": [
+        "marketing-effect",
+        "animated-text",
+        "background",
+        "marquee",
+        "globe"
+      ],
       "stack": "react+tailwind+motion",
       "licence": "MIT",
       "licence-read": "magicuidesign/magicui repository licence, 2026-10-27",
@@ -63,7 +96,12 @@
       "id": "@react-bits",
       "url": "https://reactbits.dev",
       "registry": "https://reactbits.dev/r/{name}.json",
-      "for": ["animation", "text-effect", "background", "scroll-effect"],
+      "for": [
+        "animation",
+        "text-effect",
+        "background",
+        "scroll-effect"
+      ],
       "stack": "react+tailwind",
       "licence": "MIT with Commons Clause: you may ship them in a product, you may not sell or redistribute the components themselves",
       "licence-read": "DavidHDev/react-bits LICENSE.md, 2026-10-27",
@@ -74,7 +112,13 @@
       "id": "@uiarc",
       "url": "https://uiarc.dev",
       "registry": "https://uiarc.dev/r/{name}.json",
-      "for": ["animation", "block", "marketing", "pricing", "hero"],
+      "for": [
+        "animation",
+        "block",
+        "marketing",
+        "pricing",
+        "hero"
+      ],
       "stack": "react+tailwind+shadcn",
       "licence": "not stated on the site's pages that were read",
       "licence-read": "uiarc.dev home page, 2026-10-27",
@@ -85,7 +129,11 @@
       "id": "@23rd",
       "url": "https://23rd.dev",
       "registry": "https://23rd.dev/r/{name}.json",
-      "for": ["shader", "background", "interactive-effect"],
+      "for": [
+        "shader",
+        "background",
+        "interactive-effect"
+      ],
       "stack": "react",
       "licence": "not stated on the home page",
       "licence-read": "23rd.dev home page, 2026-10-27",
@@ -96,7 +144,11 @@
       "id": "@aceternity",
       "url": "https://ui.aceternity.com",
       "registry": "https://ui.aceternity.com/registry/{name}.json",
-      "for": ["marketing-effect", "hero", "card-effect"],
+      "for": [
+        "marketing-effect",
+        "hero",
+        "card-effect"
+      ],
       "stack": "react+tailwind+motion",
       "licence": "not stated on the pricing page",
       "licence-read": "ui.aceternity.com/pricing, 2026-10-27",
@@ -107,7 +159,11 @@
       "id": "@hyperui",
       "url": "https://hyperui.dev",
       "registry": null,
-      "for": ["plain-tailwind", "marketing-section", "form"],
+      "for": [
+        "plain-tailwind",
+        "marketing-section",
+        "form"
+      ],
       "stack": "tailwind, no react",
       "licence": "MIT",
       "licence-read": "markmead/hyperui repository licence, 2026-10-27",
@@ -118,7 +174,11 @@
       "id": "tremor",
       "url": "https://tremor.so",
       "registry": null,
-      "for": ["chart", "kpi", "spark-chart"],
+      "for": [
+        "chart",
+        "kpi",
+        "spark-chart"
+      ],
       "stack": "react+tailwind",
       "licence": "Apache-2.0",
       "licence-read": "tremorlabs/tremor repository licence and the npm record for @tremor/react, 2026-10-27",
@@ -130,7 +190,12 @@
     {
       "id": "shadcn-blocks",
       "url": "https://ui.shadcn.com/blocks",
-      "for": ["dashboard", "sidebar", "login", "calendar-screen"],
+      "for": [
+        "dashboard",
+        "sidebar",
+        "login",
+        "calendar-screen"
+      ],
       "stack": "react+tailwind+shadcn",
       "licence": "MIT",
       "licence-read": "shadcn-ui/ui repository licence, 2026-10-27",
@@ -139,7 +204,11 @@
     {
       "id": "component-gallery",
       "url": "https://component.gallery",
-      "for": ["pattern-reference", "naming", "component-api"],
+      "for": [
+        "pattern-reference",
+        "naming",
+        "component-api"
+      ],
       "stack": "any",
       "licence": "not stated",
       "licence-read": "component.gallery home page, 2026-10-27",
@@ -149,7 +218,9 @@
     {
       "id": "21st",
       "url": "https://21st.dev/community/libraries",
-      "for": ["library-discovery"],
+      "for": [
+        "library-discovery"
+      ],
       "stack": "react+tailwind+shadcn",
       "licence": "no component licence stated",
       "licence-read": "21st.dev/community/libraries and 21st.dev/pricing, 2026-10-27",
@@ -161,7 +232,9 @@
     {
       "id": "carbon-empty-states",
       "url": "https://carbondesignsystem.com/patterns/empty-states-pattern/",
-      "for": ["empty-state"],
+      "for": [
+        "empty-state"
+      ],
       "stack": "any",
       "licence": "Apache-2.0 for the design system",
       "licence-read": "not re-read on 2026-10-27; inherited from the blueprint skill's list"
@@ -169,7 +242,12 @@
     {
       "id": "primer-ui-patterns",
       "url": "https://primer.style/product/ui-patterns/",
-      "for": ["loading", "saving", "feedback", "progressive-disclosure"],
+      "for": [
+        "loading",
+        "saving",
+        "feedback",
+        "progressive-disclosure"
+      ],
       "stack": "any",
       "licence": "not read",
       "licence-read": "not re-read on 2026-10-27; inherited from the blueprint skill's list"
@@ -199,6 +277,10 @@
     {
       "url": "https://www.agentation.com",
       "reason": "not a component source: a dev-dependency toolbar that turns UI annotations into agent context. Free for internal use, commercial redistribution needs a licence, desktop only, read 2026-10-27"
+    },
+    {
+      "url": "https://kinetics.colorion.co",
+      "reason": "162 copy-paste CSS and React motion snippets, and a real reference for easing values, but not a component source: /registry.json and /r/registry.json both return 404, so the script cannot reach it. No licence is stated anywhere on the site; the parent site colorion.co/terms covers palettes, not these snippets. No snippet carries a prefers-reduced-motion rule and several loop forever, so every one of them fails gates.md floor rule 9 as published. Read 2026-11-01"
     }
   ]
 }

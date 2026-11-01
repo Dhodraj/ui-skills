@@ -1,0 +1,120 @@
+<!doctype html>
+<!--
+  Builds the A/B comparison figure. It composes real screenshots of the two
+  real builds; nothing here is redrawn. Pass the figure id in the query
+  string, for example figure.html?f=wide, then screenshot #fig.
+
+  The numbers in CONF come from measure.js run against each page. They are
+  pasted in by the comparison run, never typed from memory.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --paper: #f7f5f1; --ink: #121210; --ink-2: #4a4843; --ink-3: #6e6b64;
+    --rule: #dedad2; --bad: #b4420f; --good: #1f5c3d;
+    font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink);
+         -webkit-font-smoothing: antialiased; }
+  #fig { width: 1180px; padding: 30px; background: var(--paper); }
+  #fig.narrow { width: 860px; }
+
+  h2 { font-size: 20px; letter-spacing: -.02em; margin: 0 0 5px; }
+  .say { font-size: 14px; color: var(--ink-2); margin: 0 0 22px; max-width: 88ch;
+         line-height: 1.5; }
+  .say b { color: var(--ink); font-weight: 650; }
+
+  .pair { display: grid; gap: 22px; grid-template-columns: 1fr 1fr; }
+  .pair.stack { grid-template-columns: 1fr; }
+  .pair.phones { grid-template-columns: 375px 375px; justify-content: start; }
+  .side { min-width: 0; }
+
+  .tag { display: inline-flex; align-items: center; gap: 7px;
+         font-size: 12px; font-weight: 700; letter-spacing: .09em;
+         text-transform: uppercase; margin-bottom: 9px; }
+  .tag .m { width: 9px; height: 9px; flex: none; }
+  .tag.before { color: var(--bad); }
+  .tag.before .m { background: var(--bad);
+                   clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .tag.after { color: var(--good); }
+  .tag.after .m { background: var(--good); border-radius: 50%; }
+
+  .shot { border-radius: 8px; overflow: hidden; background: #fff; margin: 0;
+          box-shadow: 0 0 0 1px oklch(0 0 0 / .08),
+                      0 2px 6px -2px oklch(0 0 0 / .1); }
+  .shot img { display: block; width: 100%; height: auto; }
+
+  .note { font-size: 13px; color: var(--ink-2); margin: 10px 0 0;
+          display: flex; gap: 7px; align-items: flex-start; line-height: 1.45; }
+  .note b { color: var(--ink); font-weight: 650; }
+  .note .k { color: var(--ink-3); flex: none; }
+
+  table.nums { width: 100%; border-collapse: collapse; margin-top: 24px;
+               font-size: 13px; }
+  table.nums th, table.nums td { text-align: left; padding: 7px 10px;
+                                 border-bottom: 1px solid var(--rule); }
+  table.nums thead th { font-size: 11px; letter-spacing: .08em;
+                        text-transform: uppercase; color: var(--ink-3);
+                        border-bottom-width: 2px; }
+  table.nums td.n { text-align: right; font-variant-numeric: tabular-nums;
+                    width: 15%; }
+  table.nums td.was { color: var(--bad); font-weight: 650; }
+  table.nums td.now { color: var(--good); font-weight: 650; }
+  table.nums td.same { color: var(--ink-3); font-weight: 400; }
+  table.nums caption { caption-side: bottom; text-align: left; padding-top: 10px;
+                       font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="fig"><div id="slot"></div></div>
+
+<script>
+/* Filled in by the comparison run. Every number is read from measure.js
+   output, never typed from memory. */
+const CONF = {};
+
+const id = new URLSearchParams(location.search).get("f") || "wide";
+const f = CONF[id];
+const fig = document.getElementById("fig");
+if (!f) { document.getElementById("slot").textContent = "no figure: " + id; }
+else {
+  if (f.narrow) fig.classList.add("narrow");
+
+  const side = (kind, src, note) => {
+    const cls = kind === "a" ? "before" : "after";
+    const word = kind === "a" ? (f.words ? f.words[0] : "Without the skill")
+                              : (f.words ? f.words[1] : "With the skill");
+    return `<div class="side">
+      <div class="tag ${cls}"><span class="m"></span>${word}</div>
+      <figure class="shot"><img src="${src}" alt=""></figure>
+      ${note ? `<p class="note"><span class="k">&rarr;</span><span><b>${note[0]}.</b> ${note[1]}</span></p>` : ""}
+    </div>`;
+  };
+
+  const pair = `<div class="pair ${f.layout || ""}">
+    ${side("a", f.a, f.aNote)}${side("b", f.b, f.bNote)}</div>`;
+
+  const rows = (f.rows || []).map(([label, a, b]) => {
+    const cls = a === b ? "same" : "";
+    return `<tr><td>${label}</td>
+      <td class="n ${cls || "was"}">${a}</td>
+      <td class="n ${cls || "now"}">${b}</td></tr>`;
+  }).join("");
+
+  const table = rows ? `<table class="nums">
+    <thead><tr><th>Measured in the browser</th>
+      <th class="n">Without</th><th class="n">With</th></tr></thead>
+    <tbody>${rows}</tbody>
+    ${f.caption ? `<caption>${f.caption}</caption>` : ""}
+  </table>` : "";
+
+  document.getElementById("slot").innerHTML =
+    `<h2>${f.h2}</h2><p class="say">${f.say}</p>${pair}${table}`;
+}
+</script>
+</body>
+</html>

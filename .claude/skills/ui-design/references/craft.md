@@ -70,6 +70,20 @@ surfaces, and each picks its own radius.
   driven by a one-way timeline either stutters or refuses to reverse. Give
   the moments that matter more scroll distance, and keep the rest brisk.
 
+## Where to look up a motion value
+
+`https://kinetics.colorion.co` publishes 162 interface animations with their
+real CSS, read on 2026-11-01. Useful for the shape of an effect you have
+already decided to build, and its easing curves agree with the ones above:
+its glide is `cubic-bezier(0.16, 1, 0.3, 1)` and its overshoot is
+`cubic-bezier(0.34, 1.56, 0.64, 1)`.
+
+Two things to fix in anything copied from there. **No snippet carries a
+`prefers-reduced-motion` rule**, and several loop forever, so each one fails
+the floor rule above until you add one. And no licence is stated on the site:
+its parent's terms cover colour palettes, not this code. Take a value, not a
+file, until somebody states the terms.
+
 ## Entrances, and where they are allowed
 
 Stagger a staged entrance by ~100ms per region, combining `opacity`,
