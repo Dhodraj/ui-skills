@@ -84,12 +84,10 @@ A review with no stated principles is taste, and taste loses arguments. So
 `ui-design` writes the principles down before it builds, into one `DESIGN.md`
 at the project root, and `ui-review` measures against that file.
 
-It has two layers. Tokens in YAML, following the `design.md` specification
-from `google-labs-code/design.md`. That specification is the only one of
-these formats with a working linter. Then prose sections, following the
-longer list that `VoltAgent/awesome-design-md` uses. That list adds two
-sections every real product needs and the specification lacks: responsive
-behaviour, and the brief a future agent gets handed.
+Two layers. Tokens in YAML, which the linter and the Tailwind export read.
+Then ten prose sections, carrying what tokens cannot: the mood, the
+guardrails, what happens at a phone width, and the brief a future agent
+gets.
 
 ```bash
 pnpm dlx @google/design.md lint DESIGN.md      # broken refs, missing primary,
@@ -116,11 +114,6 @@ Needs Node 20 or newer. Network for registry search, which falls back to a
 cached `--curated-only` search without it. A Playwright MCP server for stages
 8 and 9. Without one, renders fall back to headless Chrome, and every journey
 claim is reported unverified.
-
-Better with, never required: `blueprint` and `inspect` for the numeric
-defaults and the render-and-look pass. `ui-ux-audit` for a deeper measuring
-script. `taste-skill` for art direction on a public page. `customer-research`
-for real customer evidence. Each is referenced rather than vendored.
 
 Full instructions: [docs/install-and-invoke.md](docs/install-and-invoke.md).
 
@@ -178,23 +171,7 @@ side by side.
 Every figure, run, depot and customer in `demo/` is sample data, and the pages
 say so on their own face.
 
-## Licence and attribution
+## Licence
 
-MIT. [NOTICE](.claude/skills/ui-design/NOTICE) records what was adapted and
-from where: `ui-ux-audit-skill`, `human-experience`, `customer-research`,
-`taste-skill`, `impeccable`, `make-interfaces-feel-better`,
-`emilkowalski/skills`, `google-labs-code/design.md`,
-`VoltAgent/awesome-design-md`, `Nutlope/hallmark`, `nexu-io/open-design` and
-`greensock/gsap-skills`. No file from any of them is copied; each entry says
-what idea was taken and how it was changed.
-
-Two sources were read and deliberately not adapted. `DavidHDev/react-bits`
-and `DavidHDev/canvas-ui` are both **MIT + Commons Clause**. That permits use
-inside a product. It forbids redistributing the components "alone, in a
-bundle, or as a ported version". GitHub's sidebar reports both as
-`NOASSERTION`, so the restriction is invisible unless the `LICENSE` file is
-opened. `ui-find` names them as a worked example of why the label is not the
-licence.
-
-The reading behind every source, with its licence as read at the source, is
-in [docs/source-research.md](docs/source-research.md).
+MIT. [NOTICE](.claude/skills/ui-design/NOTICE) lists every source adapted,
+with its licence. No file from any of them is copied.
