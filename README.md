@@ -1,4 +1,4 @@
-# product-experience-engineering
+# ui-skills
 
 Three agent skills for Claude Code. They make a coding agent decide what a
 screen is for before writing it. They write the design system down before
@@ -186,8 +186,8 @@ the user picks a direction.
 ## Install
 
 ```bash
-git clone git@github.com:Dhodraj/product-experience-engineering.git
-cp -R product-experience-engineering/.claude/skills/* ~/.claude/skills/
+git clone git@github.com:Dhodraj/ui-skills.git
+cp -R ui-skills/.claude/skills/* ~/.claude/skills/
 ```
 
 Or copy the three skill folders into any project's `.claude/skills/`.
