@@ -63,59 +63,63 @@ front of a customer.
 11. **Targets.** 24 × 24 minimum. 44 × 44 wherever a thumb is expected.
 12. **Decorative graphics** carry `aria-hidden`, and meaningful ones carry a
     label.
+13. **Every gesture has a pointer-free path to the same outcome.** A swipe, a
+    drag, a pinch or a long press is an addition, never the only way. A row
+    that deletes only by swiping, or a sheet that closes only by dragging,
+    locks out the keyboard and the screen reader.
 
 ## Floor: layout that breaks
 
-13. **No horizontal scrolling at any width from 320 to 1920.** Put
+14. **No horizontal scrolling at any width from 320 to 1920.** Put
     `overflow-x: clip` on both `html` and `body`. Never `hidden`, never
     `100vw`, which includes the scrollbar and so causes the overflow it
     appears to prevent.
-14. **Image-bearing grid tracks use `minmax(0, 1fr)`**, never a bare `1fr`,
+15. **Image-bearing grid tracks use `minmax(0, 1fr)`**, never a bare `1fr`,
     and long headings carry `overflow-wrap: break-word` with `min-width: 0`.
     A bare `1fr` refuses to shrink below its content and pushes the page wide.
-15. **Hero height in `dvh` or `svh`, never `vh`.** On a phone, `vh` measures
+16. **Hero height in `dvh` or `svh`, never `vh`.** On a phone, `vh` measures
     the viewport without the browser's own chrome, so the first screen is
     taller than the screen.
-16. **One sticky element per edge.** Two `position: sticky; top: 0` siblings
+17. **One sticky element per edge.** Two `position: sticky; top: 0` siblings
     cover each other.
-17. **No text painted under another element.**
-18. **No button label or primary navigation link that wraps** at any width.
+18. **No text painted under another element.**
+19. **No button label or primary navigation link that wraps** at any width.
 
 ## Floor: the system
 
-19. **Every colour and every font goes through a token.** No literal colour
+20. **Every colour and every font goes through a token.** No literal colour
     and no `font-family` past the token block. This is what makes a theme
     change possible and a review mechanical.
-20. **Never `transition: all`.** Name the properties. And never animate
+21. **Never `transition: all`.** Name the properties. And never animate
     `width`, `height`, `top` or `left`: each forces layout on every frame.
     Animate `transform` and `opacity`.
-21. **One containment layer.** No card inside a card.
+22. **One containment layer.** No card inside a card.
 
 ## Reflex: the look a model defaults to
 
 Each of these is what the training data holds, not what the product needs.
 
-22. **The purple-to-blue gradient**, and its relatives: blue to cyan, indigo
+23. **The purple-to-blue gradient**, and its relatives: blue to cyan, indigo
     to pink, and any of them clipped to text. Use one anchor hue and solid
     ink. A flat surface with deliberate type beats a gradient every time.
-23. **The framework default palette.** `indigo-500`, `violet-600`,
+24. **The framework default palette.** `indigo-500`, `violet-600`,
     `slate-900` and the rest of the Tailwind defaults as the accent colour.
     Mix a colour instead, in OKLCH.
-24. **Pure `#000` and pure `#fff`** outside the token block. Tint the paper
+25. **Pure `#000` and pure `#fff`** outside the token block. Tint the paper
     and the ink toward the anchor hue, even slightly. Pure black on pure white
     is the only palette no designer chose.
-25. **Emoji as icons.** Use a single icon set, drawn at a consistent stroke
+26. **Emoji as icons.** Use a single icon set, drawn at a consistent stroke
     width, taking `currentColor`. Never two icon libraries in one product.
-26. **Three equal columns of icon-above-heading tiles**, each icon in its own
+27. **Three equal columns of icon-above-heading tiles**, each icon in its own
     rounded coloured square. Vary the widths and heights, or set the icons
     inline.
-27. **The template page**: hero, three features, call to action, footer, in
+28. **The template page**: hero, three features, call to action, footer, in
     that order, with every section separated by the same gap. Decide the
     sections from what the visitor needs, and vary how they are separated.
-28. **The default system face as the display face.** Inter, Roboto, Open
+29. **The default system face as the display face.** Inter, Roboto, Open
     Sans, Poppins and Lato are the body-text defaults of the last decade. A
     display face is a decision; make one.
-29. **Tracked capitals as a label.** Small text set uppercase and letter-
+30. **Tracked capitals as a label.** Small text set uppercase and letter-
     spaced reads as a generated eyebrow. Use the body face, one step smaller,
     in sentence case.
 
@@ -125,41 +129,41 @@ Each of these is what the training data holds, not what the product needs.
     > setting them well once chosen. Where `DESIGN.md` calls for capitals, set
     > them with the tracking and waive this rule.
 
-30. **Decorative chrome with no content**: blurred floating orbs, aurora
+31. **Decorative chrome with no content**: blurred floating orbs, aurora
     blobs, wave dividers, rotated vertical text, scroll hints, a "BETA" pill,
     a mono-capitals strip, a `01 / 04` counter.
-31. **Template punctuation**: middle dots joining metadata, an arrow glued to
+32. **Template punctuation**: middle dots joining metadata, an arrow glued to
     link text, a coloured dot that means nothing. Use a line break, a column
     or a hairline.
-32. **More than three font families**, or more than three weights.
-33. **The same hover on everything.** One signal per element, applied to the
+33. **More than three font families**, or more than three weights.
+34. **The same hover on everything.** One signal per element, applied to the
     container, not three effects at once.
-34. **Overshoot easing on a state change.** A bounce says "look at me" where
+35. **Overshoot easing on a state change.** A bounce says "look at me" where
     the customer asked for a result.
-35. **Placeholder images from an external service**: `unsplash.com`,
+36. **Placeholder images from an external service**: `unsplash.com`,
     `placehold.co`, `picsum.photos`. Ship a real asset, or an empty slot the
     page admits is empty.
-36. **A drawn browser window, phone frame or terminal.** Capture the real
+37. **A drawn browser window, phone frame or terminal.** Capture the real
     product instead. One device frame holding a real screenshot is allowed.
-37. **Prose measure outside 45 to 75 characters.** Set `max-width: 65ch`.
-38. **Running text below 16px**, or any text below 12px.
-39. **The accent used everywhere.** It is a signal, not a fill. Past roughly
+38. **Prose measure outside 45 to 75 characters.** Set `max-width: 65ch`.
+39. **Running text below 16px**, or any text below 12px.
+40. **The accent used everywhere.** It is a signal, not a fill. Past roughly
     5% of the viewport it stops signalling anything.
 
 ## Reflex: copy
 
-40. **Buzzwords**: seamless, robust, empower, supercharge, elevate,
+41. **Buzzwords**: seamless, robust, empower, supercharge, elevate,
     effortless, unlock, unleash, next-generation, world-class, best-in-class,
     industry-leading, mission-critical, future-proof. Say what the product
     does, in the nouns its customers use.
-41. **Placeholder names and clichéd companies**: Jane Doe, Acme, Nexus, lorem
+42. **Placeholder names and clichéd companies**: Jane Doe, Acme, Nexus, lorem
     ipsum, "Feature one / Feature two".
-42. **The rebuttal cadence** used more than once: "Not a tool. A platform."
-43. **The stock second action**: "Learn more" beside "Get started", where
+43. **The rebuttal cadence** used more than once: "Not a tool. A platform."
+44. **The stock second action**: "Learn more" beside "Get started", where
     neither says what happens next.
-44. **A section heading that is a category label**: Features, Our story, Why
+45. **A section heading that is a category label**: Features, Our story, Why
     us. Say what the visitor gets there.
-45. **The swap test.** If a headline would work unchanged on a competitor's
+46. **The swap test.** If a headline would work unchanged on a competitor's
     page, it says nothing. Rewrite it.
 
 ## Finish: answer each, never blocked by it

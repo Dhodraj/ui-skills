@@ -281,6 +281,10 @@
     {
       "url": "https://kinetics.colorion.co",
       "reason": "162 copy-paste CSS and React motion snippets, and a real reference for easing values, but not a component source: /registry.json and /r/registry.json both return 404, so the script cannot reach it. No licence is stated anywhere on the site; the parent site colorion.co/terms covers palettes, not these snippets. No snippet carries a prefers-reduced-motion rule and several loop forever, so every one of them fails gates.md floor rule 9 as published. Read 2026-11-01"
+    },
+    {
+      "url": "https://nameless-water-00e7.z66nry86gf.workers.dev",
+      "reason": "not a component source: 378 mobile micro-interactions as written prompt specs, no code and no registry. One spec per set is free and readable; the rest are a $19 Gumroad pack. Only the free specs are licensed for use in your own work, and no formal licence is named. No spec mentions prefers-reduced-motion and every demo loops forever, so all of them fail gates.md floor rule 9 as published. Its free gesture, threshold and spring numbers are recorded in references/craft.md. Host is a workers.dev subdomain and may move. Read 2026-11-03"
     }
   ]
 }

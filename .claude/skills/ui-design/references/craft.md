@@ -84,6 +84,17 @@ the floor rule above until you add one. And no licence is stated on the site:
 its parent's terms cover colour palettes, not this code. Take a value, not a
 file, until somebody states the terms.
 
+`UI Motion Prompts` describes 378 mobile micro-interactions as written specs,
+each with its real timings, spring constants and thresholds. It was read on
+2026-11-03 at `https://nameless-water-00e7.z66nry86gf.workers.dev`. That is a
+`workers.dev` host and may move. The maker is `@ui_motion_prompts` on
+Instagram and sells the set at `conceptless.gumroad.com/l/pack`.
+
+One spec per set is free and the rest are paid. The gesture rules below were
+drawn from the free ones. It carries the same two defects as kinetics: no spec
+mentions `prefers-reduced-motion`, and every demo loops forever. Only the free
+specs are licensed for use in your own work, so take a number, not a spec.
+
 ## Entrances, and where they are allowed
 
 Stagger a staged entrance by ~100ms per region, combining `opacity`,
@@ -105,6 +116,51 @@ instant feedback, or a colour or opacity change under 150ms.
 Below the first screen, reveal a section the first time it arrives and never
 again, with an `IntersectionObserver` that unobserves on the first hit. The
 first screen animates on load and must not wait for a scroll.
+
+## Gestures, thresholds and springs
+
+A drag, a swipe, a pull or a sheet is not an entrance. The customer's finger
+is on the element, so the element answers the finger continuously. It does not
+play a clip.
+
+- While the finger is down, position is a pure function of the finger. Same
+  rule as scroll above. No duration and no easing: the element tracks. Easing
+  belongs to the release alone.
+- Show commitment at the threshold, not at the release. A row that deletes
+  past 60% of its width starts growing the trash icon at about 36% of travel.
+  The customer learns where the line is while there is still time to pull
+  back. An action that reveals itself only after the finger lifts is a
+  surprise.
+- The release decides by distance or by speed, whichever arrives first. Past
+  about 70% of travel, complete the action. Below it, return. A fast flick
+  completes from anywhere, because the customer already committed.
+- Snap to named stops, never to the position the finger left. A sheet has
+  peek, half and full. Record the three pixel heights, and let the release
+  pick the nearest by midpoint. A sheet that rests wherever it was dropped has
+  no state the next screen can rely on.
+- Spring the release; do not tween it. Overshoot about 10% of the remaining
+  distance, then settle. Two numbers control it, stiffness and damping. A
+  damping ratio near 0.55 reads springy and near 0.72 reads settled. Anything
+  the customer repeats all day gets settled.
+- Two edges on two springs gives stretch. Make the leading edge of a moving
+  indicator stiffer than its trailing edge. A tab pill or an underline then
+  stretches while it travels and snaps back to its real width on arrival. Use
+  around stiffness 19 and damping 0.55 leading, against 11 and 0.72 trailing.
+  One spring for the whole element reads mechanical.
+- Whatever the drag dims or reveals is a function of the same position. Scrim
+  opacity is a fraction of travel, so dragging back undims by itself. Never
+  run it as a separate fade, which cannot reverse.
+- A shake decays. `x = A · sin(2πft) · e^(−kt)`, with A 14px, f 9Hz, k 6,
+  finished inside 800ms. A fixed keyframe shake repeats each cycle identically
+  and reads as a broken loop rather than a rejection.
+- Stagger arrivals 50 to 150ms apart. Use 150ms for discrete items, such as
+  the digits of a code landing one by one. Use 50ms for a wave across a row of
+  boxes that confirm together. Land each one with a small overshoot from a
+  back ease, never from `scale(0)`.
+- Every gesture needs a pointer-free path to the same outcome. A row with
+  swipe-to-delete also needs a delete the keyboard can reach. A sheet that
+  closes only by dragging traps anyone who cannot drag. This is the rule
+  gesture work breaks most often.
 
 ## Type and numbers
 
