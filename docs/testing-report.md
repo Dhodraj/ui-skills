@@ -17,6 +17,11 @@ answered, and ran a live search against the curated registries.
 `node scripts/check-sources.js` reports: `sources.json: 16 sources
 (9 searchable), 6 rejected, no problems`.
 
+On 2026-11-04 the same two commands report `36 passed, 0 failed`,
+`39 passed, 0 failed` and `sources.json: 17 sources (10 searchable),
+8 rejected, no problems`. The counts moved because sources were added after
+this run, not because anything regressed.
+
 Two defects were found by the suite and fixed while writing it: `grep`
 treating a pattern starting with a dash as an option, and the search script
 deriving a registry's catalogue url without resolving a `{style}` segment,

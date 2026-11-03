@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-11-01",
+  "updated": "2026-11-04",
   "note": "Curated component sources, read at the source on the date above. 'licence' records what was read, not what is assumed. Entries with a 'registry' url are searchable by scripts/find-components.js; the public directory at https://ui.shadcn.com/r/registries.json covers the other 500 registries.",
   "components": [
     {
@@ -184,6 +184,30 @@
       "licence-read": "tremorlabs/tremor repository licence and the npm record for @tremor/react, 2026-10-27",
       "install": "copy from the page; Tremor Raw has no CLI",
       "notes": "Slowing down: the repository was last pushed 2025-10-10 and @tremor/react 3.18.7 was last published 2025-01-13. It is not in the shadcn registry directory. Prefer @reui charts or a chart built on Recharts for new work, and say why if you choose Tremor."
+    },
+    {
+      "id": "@boardui",
+      "url": "https://www.boardui.com",
+      "registry": "https://www.boardui.com/r/{name}.json",
+      "for": [
+        "dashboard",
+        "table",
+        "data-grid",
+        "chart",
+        "agent",
+        "chat",
+        "sidebar",
+        "app-shell",
+        "modal",
+        "date",
+        "form",
+        "command-palette"
+      ],
+      "stack": "react+tailwind+react-aria",
+      "licence": "MIT for the 66 items that are in BoardUI/boardui; unstated for the other 22",
+      "licence-read": "BoardUI/boardui repository licence and the registry item paths, 2026-11-04",
+      "install": "pnpm dlx boardui@latest init, then pnpm dlx boardui@latest add <name>",
+      "notes": "88 registry items with titles and descriptions, so search matches meaning, not only names. Built on react-aria-components, not Radix: check that before mixing it with shadcn primitives. Strongest for dashboards and agent screens (agent-chat, agent-thinking, agent-log, composer-loader, data-table, app-shell). 22 of the 88 items are absent from the MIT repository, among them modal, toast, popover, skeleton, accordion, data-table and app-shell. The registry serves their full source over HTTP with no authentication, but a Pro licence key exists (boardui login <key>) and holds a per-machine seat, so those 22 are reachable without being licensed. Take one only after the terms are stated."
     }
   ],
   "screens": [
