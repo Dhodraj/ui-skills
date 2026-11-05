@@ -108,8 +108,9 @@ seven. Each one is a failure that renders wrong while the source reads fine.
    including the pressed, hovered and selected states?
 6. **Rhythm.** Do the spacing and type sizes come from the product's scale, or
    were they chosen for this screen alone?
-7. **State.** Render the states a customer will meet: empty, loading, one
-   item, many items, error. A screen built on fixtures hides all but one.
+7. **State.** Look at every state step 5 rendered, not only the one the
+   fixtures gave you. A state that is correct in the DOM and ugly on screen
+   fails here. Step 5 decides which states to render; this check judges them.
 
 Say which of the seven each finding is. Where you could not render, say so
 rather than judging from the source.
@@ -154,7 +155,7 @@ did not have.
 
 | Axis | Cue | What to render |
 |---|---|---|
-| Lifecycle | always | Empty, loading, failure, recovery, no permission |
+| Lifecycle | always | Empty at first use, empty because a filter matched nothing, loading, failure, recovery, no permission |
 | Quantity | it repeats over items | Zero, one, the realistic count, ten times the realistic count |
 | Content length | it renders text it does not author | Empty string, one word, several sentences, one unbreakable string |
 | Content shape | the text can come from customers or from locales nobody on the team writes | Emoji alone and inside a sentence, right-to-left, mixed direction, diacritics and tall scripts, figures down a column |
@@ -164,7 +165,10 @@ did not have.
 Lifecycle, in detail. "Not reachable here" is a valid result as long as it is
 recorded.
 
-- Empty: no rows yet, first use. Does it say what to do next?
+- Empty at first use: no rows yet. Does it say what to do next?
+- Empty because a filter matched nothing: a different screen from the one
+  above. Does it say which filter emptied it and offer to clear it? Zeros
+  in place of an empty result are a defect, not a state.
 - Loading: feedback inside a few hundred milliseconds, and does the layout
   hold its size?
 - Failure: a request that fails, a validation that rejects, a timeout. Is the
@@ -300,10 +304,10 @@ Top three: <three ids, one line each>
 <findings in the format above, each with its kind>
 
 ## States
-empty <result> · loading <result> · dense <result> · error <result>
-· recovery <result> · permission <result | not reachable>
-· 10x count <result> · unbreakable string <result> · 320px <result>
-· flex squeeze <result>
+empty first use <result> · empty by filter <result> · loading <result>
+· dense <result> · error <result> · recovery <result>
+· permission <result | not reachable> · 10x count <result>
+· unbreakable string <result> · 320px <result> · flex squeeze <result>
 
 ## What is sound
 <the decisions worth keeping, so a later session does not undo them>
