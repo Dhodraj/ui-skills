@@ -62,6 +62,23 @@ Taken as ideas, reworded and reduced:
   Changed: reduced to one page, rewritten, and the review format and the
   per-category reference files are not reproduced.
 
+- jakubkrehel/skills, MIT. https://github.com/jakubkrehel/skills
+  Taken into ui-review, section 5. A cue on each scenario axis, and the rule
+  that a dropped axis is named. The content-shape axis: emoji, right-to-left,
+  mixed direction, tall scripts. The container tested as a fixed box rather
+  than a viewport resize, the flex-sibling squeeze included. Ten times the
+  realistic item count. The warning that re-declaring dark tokens under a
+  class observes a different component.
+  Taken into ui-review/references/changes.md. Resolve a base, and never fall
+  back to HEAD~1..HEAD. Expand a changed file to the surfaces it renders in.
+  Read the removed side of each hunk against a signal table. Clear a signal
+  that an equivalent replacement explains. Status every finding by cause. Keep
+  the review read-only, the checkout included.
+  Changed: rewritten, and reduced to two places in one skill. Not reproduced:
+  the per-domain better-* skills, the severity scale, the coverage table, the
+  verdict, and the teardown, state-machine, break, variant and
+  explain-interface skills.
+
 - emilkowalski/skills, MIT. https://github.com/emilkowalski/skills
   Taken: ease-out over ease-in and why, the duration bands per interaction,
   never animating from scale(0), and transitions for interruptible state

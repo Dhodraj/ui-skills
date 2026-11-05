@@ -165,6 +165,11 @@ Each of these is what the training data holds, not what the product needs.
     us. Say what the visitor gets there.
 46. **The swap test.** If a headline would work unchanged on a competitor's
     page, it says nothing. Rewrite it.
+47. **The restated label.** A heading with a subtitle, a helper line and a
+    tooltip that all say the same thing. Position, grouping and size already
+    say what a thing is and what it belongs to. Keep a second line only where
+    it carries what the layout cannot: a unit, a limit, a consequence, a
+    deadline. Delete the rest.
 
 ## Finish: answer each, never blocked by it
 

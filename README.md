@@ -13,7 +13,7 @@ forgettable.
 |---|---|---|
 | `ui-design` | "Make the pipeline health screen modern" | Writes `DESIGN.md` when the project has none, deals three directions and gets one picked, builds a mock when you want one, then builds the real thing |
 | `ui-find` | "Find me a timeline component with expandable logs" | Searches the project, then 508 registries, reads the real code and the real licence |
-| `ui-review` | "Audit this dashboard" | Measures the live render or the Storybook, walks the journey, checks it against your design principles. Changes no files unless asked |
+| `ui-review` | "Audit this dashboard", "review my branch" | Measures the live render or the Storybook, walks the journey, checks it against your design principles. Also reviews what a diff, branch or pull request did to an interface. Changes no files unless asked |
 
 ## What ui-design does
 
@@ -135,6 +135,7 @@ Full instructions: [docs/install-and-invoke.md](docs/install-and-invoke.md).
     tests/                          36 offline tests, 39 with --network
   ui-find/                          natural language to a real component
   ui-review/                        measure, walk, judge against the system
+    references/changes.md           reviewing a change, not a screen
 docs/                               research, architecture decision, testing
                                     report, examples, maintenance
 demo/                               what the skill produced, and the two

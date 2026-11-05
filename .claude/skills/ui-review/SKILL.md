@@ -1,6 +1,6 @@
 ---
 name: ui-review
-description: "Review a user interface that already exists and report what harms its customers, with evidence and severity. Use when asked to audit, review, critique or check a page, screen, dashboard, component or flow, to test a journey such as signup or checkout, to check a screen on a phone, or before claiming a change works. Also use when the user says a product looks off, looks AI-generated, feels dated or asks whether it is ready to ship. Works against a running application or a Storybook, measures the live render, walks the journey as a customer, checks the result against the project's design principles, and sorts findings by harm. Two modes: review only, which changes no files, and review and fix."
+description: "Review a user interface that already exists and report what harms its customers, with evidence and severity. Use when asked to audit, review, critique or check a page, screen, dashboard, component or flow, to test a journey such as signup or checkout, to check a screen on a phone, or before claiming a change works. Also use to review what a change did to an interface: a diff, a branch, a pull request or uncommitted work. Also use when the user says a product looks off, looks AI-generated, feels dated or asks whether it is ready to ship. Works against a running application or a Storybook, measures the live render, walks the journey as a customer, checks the result against the project's design principles, and sorts findings by harm. Two modes: review only, which changes no files, and review and fix."
 ---
 
 # UI review
@@ -15,6 +15,25 @@ Two modes, and the mode is settled before anything else.
 State the mode in the first line of the reply. A review-only request never
 becomes a redesign because the findings were bad. Where fixing is the obvious
 next step, finish the report and offer it.
+
+## Scope: a surface, or a change
+
+Two scopes, which answer different questions.
+
+| Scope | Asked by | Answers |
+|---|---|---|
+| A surface | "review this page", "audit the dashboard", "is this ready" | Is this interface good |
+| A change | "review my diff", "review this branch", "review pr 482", "did I break anything" | Did this change make it worse |
+
+A change scope is not a surface scope with a filter. It resolves a base
+commit and expands the changed files to the surfaces they render in. It
+then reads the lines the change removed, and statuses every finding by
+what caused it.
+Read [references/changes.md](references/changes.md) and work through it, then
+return here for the measuring, the looking and the severity.
+
+Where the request names no scope and the tree is dirty or ahead of its base,
+ask which the user meant. The two reports are not interchangeable.
 
 ## 1. Find the design principles first
 
@@ -128,23 +147,54 @@ Every row needs evidence that exists. A row with no screenshot and no snapshot
 behind it does not go in the report. "The customer would feel confused" is
 usable only when the row says what confused them.
 
-**The states a happy path hides.** Walk each one, for the surface under test.
-"Not reachable here" is a valid result as long as it is recorded.
+**The states and scenarios a happy path hides.** Each axis carries a cue: the
+property that makes it worth running. Cue matches, run the axis. Cue fails,
+drop it and name the drop in the report. An unnamed drop reads as coverage you
+did not have.
 
-- **Empty**: no rows yet, first use. Does it say what to do next?
-- **Loading**: feedback inside a few hundred milliseconds, and does the layout
+| Axis | Cue | What to render |
+|---|---|---|
+| Lifecycle | always | Empty, loading, failure, recovery, no permission |
+| Quantity | it repeats over items | Zero, one, the realistic count, ten times the realistic count |
+| Content length | it renders text it does not author | Empty string, one word, several sentences, one unbreakable string |
+| Content shape | the text can come from customers or from locales nobody on the team writes | Emoji alone and inside a sentence, right-to-left, mixed direction, diacritics and tall scripts, figures down a column |
+| Container | always | 320px, squeezed by a flex or grid sibling, very wide |
+| Environment | the project has the mode | Dark theme, browser zoom, reduced motion |
+
+Lifecycle, in detail. "Not reachable here" is a valid result as long as it is
+recorded.
+
+- Empty: no rows yet, first use. Does it say what to do next?
+- Loading: feedback inside a few hundred milliseconds, and does the layout
   hold its size?
-- **One item**, and the **densest real case**: the real row count, the longest
-  identifier, the deepest nesting.
-- **Failure**: a request that fails, a validation that rejects, a timeout. Is
-  the message specific, next to the thing that failed, and recoverable?
-- **Recovery**: can the customer get back without starting over or reloading?
-- **No permission**: what does a customer who may not do this see?
+- Failure: a request that fails, a validation that rejects, a timeout. Is the
+  message specific, next to the thing that failed, and recoverable?
+- Recovery: can the customer get back without starting over or reloading?
+- No permission: what does a customer who may not do this see?
+
+What each of the others catches, and where it is easy to get wrong:
+
+- Ten times the realistic count finds the missing scroll or pagination, the
+  sticky header that unsticks, and the render that collapses. The densest
+  fixture a project ships is almost never its densest real case.
+- One unbreakable string is a long URL or a long identifier with no wrap
+  opportunity. It overflows where several sentences wrap cleanly, so the two
+  are different tests.
+- **The container widths are fixed boxes on the page, not viewport resizes.**
+  The flex-sibling squeeze is the one that finds a missing `min-width: 0` or
+  `minmax(0, 1fr)`, which is gates rule 15, and no viewport resize reproduces
+  it. A component does not choose its container's width.
+- **Toggle the real environment mode.** Re-declaring dark tokens under a class
+  observes a different component, not the one that ships. Zoom in the browser
+  and set reduced motion in the system, then look again.
+- Focus and hover are yours to try by hand. Tab through the instances rather
+  than simulating a focus state in a harness, which can hold a ring the
+  keyboard would never show.
 
 **The mistakes.** Submit the form empty, and with one field wrong. Press the
-primary action twice. Go back mid-flow, then forward. Reload halfway through.
-Paste a long value, a value with spaces, an emoji, a very large number. Open a
-link in a new tab and carry on in the first.
+primary action twice. Go back mid-flow, then forward. Reload halfway through. Open a
+link in a new tab and carry on in the first. Content length and shape are the
+axes above, not mistakes to try here.
 
 **At 375.** Walk the whole journey at a phone width, not only look at it. A
 journey that works on desktop and dead-ends on a phone is a blocker. Check
@@ -228,13 +278,19 @@ Evidence: shots/1440-runs.png, measure-1440.json contrastFailures[3]
 
 One line each for polish items. Keep `Found` and `Why` to one or two lines.
 
+In a change scope, every finding also carries a `Status` line of `introduced`,
+`regression` or `pre-existing`, set by cause and not by position. Cap
+`pre-existing` at three.
+
 ## 10. The report
 
 ```
-# UI review: <surface>
-Mode: review only | review and fix
+# UI review: <surface or change>
+Mode:  review only | review and fix
+Scope: a surface | a change
 Measured against: <DESIGN.md | the token file | gates.md and craft.md alone>
-Checked: <widths, states, journeys walked, target, browser>
+Checked: <widths, axes run, journeys walked, target, browser>
+Axes dropped: <axis, and the cue that failed>
 Stood in for: <fixtures for live data, a seeded account, a local font>
 Not checked: <what the environment could not reach>
 
@@ -246,6 +302,8 @@ Top three: <three ids, one line each>
 ## States
 empty <result> · loading <result> · dense <result> · error <result>
 · recovery <result> · permission <result | not reachable>
+· 10x count <result> · unbreakable string <result> · 320px <result>
+· flex squeeze <result>
 
 ## What is sound
 <the decisions worth keeping, so a later session does not undo them>

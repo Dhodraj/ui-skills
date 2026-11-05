@@ -25,7 +25,10 @@
       run.sh                     36 offline tests, 39 with --network
       fixtures/                  the dashboard before and after, and a landing page
   ui-find/SKILL.md               find a component instead of writing one
-  ui-review/SKILL.md             review what exists, in two modes
+  ui-review/
+    SKILL.md                     review what exists, in two modes and two scopes
+    references/
+      changes.md                 reviewing a change rather than a screen
 docs/
   source-research.md             every supplied url, read on 2026-10-27
   adr-0001-architecture.md       why this shape
